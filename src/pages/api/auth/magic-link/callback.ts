@@ -6,7 +6,7 @@
 import type { APIRoute } from 'astro';
 import { createJwt, setSessionCookie } from '@/lib/auth';
 
-const API_BASE = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE = process.env.PUBLIC_API_URL || import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
 export const GET: APIRoute = async ({ request, redirect }) => {
   const url = new URL(request.url);

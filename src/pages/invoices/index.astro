@@ -5,9 +5,9 @@
 
 import PortalLayout from '@/layouts/portal-layout.astro';
 import PortalHeader from '@/components/portal-header.astro';
+import InvoicesTable from '@/components/invoices-table';
 import { getSession } from '@/lib/auth';
 import { invoicesApi } from '@/lib/api-client';
-import { formatCurrency, formatDate, getStatusBadge, translateStatus } from '@/lib/utils';
 
 const session = await getSession(Astro.request.headers.get('cookie'));
 if (!session) return Astro.redirect('/');
@@ -16,7 +16,6 @@ const invoicesRes = await invoicesApi.getAll(session.token);
 const allInvoices = invoicesRes.data || [];
 
 // Stats
-const totalAmount = allInvoices.reduce((s: number, i: any) => s + (i.totalAmount || 0), 0);
 const paidCount = allInvoices.filter((i: any) => i.status === 'paid').length;
 const unpaidCount = allInvoices.filter((i: any) => i.status === 'sent' || i.status === 'overdue').length;
 const overdueCount = allInvoices.filter((i: any) => i.status === 'overdue').length;
@@ -45,63 +44,6 @@ const overdueCount = allInvoices.filter((i: any) => i.status === 'overdue').leng
     </div>
   </div>
 
-  <!-- Invoices Table -->
-  <div class="glass-card overflow-hidden">
-    {allInvoices.length === 0 ? (
-      <div class="p-12 text-center text-adsun-muted">
-        <p class="text-lg font-medium mb-1">Žiadne faktúry</p>
-        <p class="text-sm">Vaše faktúry sa tu zobrazia po vystavení.</p>
-      </div>
-    ) : (
-      <div class="overflow-x-auto">
-        <table class="portal-table">
-          <thead>
-            <tr>
-              <th>Číslo</th>
-              <th>Stav</th>
-              <th>Suma</th>
-              <th class="hidden md:table-cell">Vystavená</th>
-              <th class="hidden md:table-cell">Splatnosť</th>
-              <th class="hidden lg:table-cell">Typ</th>
-              <th>PDF</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allInvoices.map((inv: any) => (
-              <tr>
-                <td class="text-adsun-orange font-mono text-sm">{inv.invoiceNumber}</td>
-                <td>
-                  <span class={`badge ${getStatusBadge(inv.status)}`}>
-                    {translateStatus(inv.status)}
-                  </span>
-                </td>
-                <td class="text-white font-medium">{formatCurrency(inv.totalAmount)}</td>
-                <td class="hidden md:table-cell">{formatDate(inv.issueDate)}</td>
-                <td class="hidden md:table-cell">{formatDate(inv.dueDate)}</td>
-                <td class="hidden lg:table-cell">
-                  {inv.isAdvance ? (
-                    <span class="text-adsun-muted text-xs">Zálohová</span>
-                  ) : (
-                    <span class="text-adsun-muted text-xs">Bežná</span>
-                  )}
-                </td>
-                <td>
-                  <a
-                    href={`/api/proxy/invoices/${inv.id}/pdf`}
-                    target="_blank"
-                    class="text-adsun-orange hover:underline text-sm inline-flex items-center gap-1"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    PDF
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </div>
+  <!-- Invoices Table with sorting & filtering -->
+  <InvoicesTable client:load invoices={allInvoices} />
 </PortalLayout>

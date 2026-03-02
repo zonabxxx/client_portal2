@@ -6,7 +6,7 @@
 import type { APIRoute } from 'astro';
 import { getSession } from '@/lib/auth';
 
-const API_BASE = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE = process.env.PUBLIC_API_URL || import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
 export const ALL: APIRoute = async ({ request, params }) => {
   const path = params.path || '';
@@ -51,9 +51,20 @@ export const ALL: APIRoute = async ({ request, params }) => {
 
     // Return the response as-is
     const responseHeaders = new Headers();
-    responseHeaders.set('Content-Type', res.headers.get('Content-Type') || 'application/json');
+    const resContentType = res.headers.get('Content-Type') || 'application/json';
+    responseHeaders.set('Content-Type', resContentType);
 
-    return new Response(await res.text(), {
+    // Forward Content-Disposition header for file downloads
+    const contentDisposition = res.headers.get('Content-Disposition');
+    if (contentDisposition) {
+      responseHeaders.set('Content-Disposition', contentDisposition);
+    }
+
+    // Use arrayBuffer for binary content (PDF, images), text for JSON
+    const isBinary = resContentType.includes('pdf') || resContentType.includes('octet-stream') || resContentType.includes('image');
+    const body = isBinary ? await res.arrayBuffer() : await res.text();
+
+    return new Response(body, {
       status: res.status,
       headers: responseHeaders,
     });

@@ -8,7 +8,7 @@ import type { ClientSession } from './types';
 const COOKIE_NAME = 'portal_session';
 
 function getSecret(): Uint8Array {
-  const secret = import.meta.env.PORTAL_JWT_SECRET || '';
+  const secret = process.env.PORTAL_JWT_SECRET || import.meta.env.PORTAL_JWT_SECRET || '';
   if (!secret) throw new Error('PORTAL_JWT_SECRET is not set');
   return new TextEncoder().encode(secret);
 }

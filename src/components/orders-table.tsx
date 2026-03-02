@@ -98,6 +98,54 @@ export default function OrdersTable({ orders: initialOrders }: { orders: Order[]
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
+  const handleReorder = async (orderId: string, btn: HTMLButtonElement) => {
+    btn.disabled = true;
+    const origHTML = btn.innerHTML;
+    btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+    try {
+      const res = await fetch(`/api/proxy/orders/${orderId}`);
+      if (!res.ok) throw new Error('Fetch failed');
+      const data = await res.json();
+      const reorderProducts = data.reorderProducts || [];
+
+      if (reorderProducts.length === 0) {
+        alert('Žiadne produkty na opätovné objednanie.');
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
+        return;
+      }
+
+      const CART_KEY = 'adsun_portal_cart';
+      let cart: any[] = [];
+      try { cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch { cart = []; }
+
+      for (const p of reorderProducts) {
+        cart.push({
+          id: 'cart-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+          productId: p.productId,
+          productName: p.productName,
+          productType: p.productType,
+          variantId: p.variantId || null,
+          variantName: p.variantName || null,
+          quantity: p.quantity || 1,
+          parameters: p.parameters || {},
+          notes: '',
+          fileNames: [],
+          categoryId: p.categoryId || null,
+          categoryName: p.categoryName || null,
+          addedAt: new Date().toISOString(),
+        });
+      }
+      localStorage.setItem(CART_KEY, JSON.stringify(cart));
+      window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: cart.length } }));
+      window.location.href = '/cart';
+    } catch {
+      alert('Chyba pri načítavaní produktov.');
+      btn.innerHTML = origHTML;
+      btn.disabled = false;
+    }
+  };
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -235,12 +283,13 @@ export default function OrdersTable({ orders: initialOrders }: { orders: Order[]
                 <th className="hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('plannedEndDate')}>
                   Deadline <SortIcon field="plannedEndDate" sortField={sortField} sortDir={sortDir} />
                 </th>
+                <th className="w-10"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-adsun-muted">
+                  <td colSpan={8} className="text-center py-8 text-adsun-muted">
                     Žiadne zákazky nezodpovedajú filtru.
                   </td>
                 </tr>
@@ -274,6 +323,20 @@ export default function OrdersTable({ orders: initialOrders }: { orders: Order[]
                     <td className="hidden md:table-cell">{formatCurrency(order.totalValue)}</td>
                     <td className="hidden md:table-cell">{formatDate(order.createdAt)}</td>
                     <td className="hidden lg:table-cell">{formatDate(order.plannedEndDate)}</td>
+                    <td>
+                      <button
+                        className="p-2 rounded-lg hover:bg-adsun-orange/20 text-adsun-muted hover:text-adsun-orange transition-colors"
+                        title="Objednať znova"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReorder(order.id, e.currentTarget);
+                        }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.182-3.182" />
+                        </svg>
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}

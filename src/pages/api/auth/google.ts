@@ -5,8 +5,8 @@
 import type { APIRoute } from 'astro';
 
 export const GET: APIRoute = async ({ redirect }) => {
-  const clientId = import.meta.env.GOOGLE_CLIENT_ID;
-  const portalUrl = import.meta.env.PUBLIC_PORTAL_URL || 'http://localhost:4000';
+  const clientId = process.env.GOOGLE_CLIENT_ID || import.meta.env.GOOGLE_CLIENT_ID;
+  const portalUrl = process.env.PUBLIC_PORTAL_URL || import.meta.env.PUBLIC_PORTAL_URL || 'http://localhost:4000';
   const redirectUri = `${portalUrl}/api/auth/google/callback`;
 
   const params = new URLSearchParams({

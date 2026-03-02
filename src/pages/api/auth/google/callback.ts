@@ -6,7 +6,7 @@
 import type { APIRoute } from 'astro';
 import { createJwt, setSessionCookie } from '@/lib/auth';
 
-const API_BASE = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE = process.env.PUBLIC_API_URL || import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
 export const GET: APIRoute = async ({ request, redirect }) => {
   const url = new URL(request.url);
@@ -18,14 +18,14 @@ export const GET: APIRoute = async ({ request, redirect }) => {
 
   try {
     // 1. Exchange code for Google tokens
-    const portalUrl = import.meta.env.PUBLIC_PORTAL_URL || 'http://localhost:4000';
+    const portalUrl = process.env.PUBLIC_PORTAL_URL || import.meta.env.PUBLIC_PORTAL_URL || 'http://localhost:4000';
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: import.meta.env.GOOGLE_CLIENT_ID,
-        client_secret: import.meta.env.GOOGLE_CLIENT_SECRET,
+        client_id: process.env.GOOGLE_CLIENT_ID || import.meta.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET || import.meta.env.GOOGLE_CLIENT_SECRET,
         redirect_uri: `${portalUrl}/api/auth/google/callback`,
         grant_type: 'authorization_code',
       }),

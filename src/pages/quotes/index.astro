@@ -85,8 +85,8 @@ for (const p of projects) {
             ) : (
               <div class="divide-y divide-adsun-border/50">
                 {(project.calculations || []).map((calc: any) => (
-                  <a href={`/quotes/${calc.id}`} class="px-5 py-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer block" style="text-decoration:none;">
-                    <div class="flex items-center gap-3 min-w-0">
+                  <div class="px-5 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
+                    <a href={`/quotes/${calc.id}`} class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" style="text-decoration:none;">
                       <div class="w-2 h-2 rounded-full bg-adsun-orange/50 flex-shrink-0"></div>
                       <div class="min-w-0">
                         <p class="text-white text-sm font-medium truncate">{calc.name}</p>
@@ -94,8 +94,8 @@ for (const p of projects) {
                           {calc.calculationNumber}
                         </p>
                       </div>
-                    </div>
-                    <div class="flex items-center gap-4 flex-shrink-0">
+                    </a>
+                    <div class="flex items-center gap-3 flex-shrink-0">
                       <span class={`badge ${getStatusBadge(calc.approvalStatus || calc.status)}`}>
                         {translateStatus(calc.approvalStatus || calc.status)}
                       </span>
@@ -105,13 +105,26 @@ for (const p of projects) {
                       <span class="text-adsun-muted text-xs hidden md:block min-w-[80px] text-right">
                         {formatDate(calc.createdAt)}
                       </span>
+
+                      {/* Reorder button */}
+                      <button
+                        class="reorder-btn p-2 rounded-lg hover:bg-adsun-orange/20 text-adsun-muted hover:text-adsun-orange transition-colors"
+                        data-calc-id={calc.id}
+                        title="Objednať znova"
+                        onclick="event.stopPropagation();"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.182-3.182" />
+                        </svg>
+                      </button>
+
                       {(calc.approvalStatus === 'SENT' || calc.status === 'SENT') ? (
-                        <div class="flex gap-2" onclick="event.preventDefault(); event.stopPropagation();">
+                        <div class="flex gap-2">
                           <button
                             class="btn-primary btn-sm text-xs"
                             data-quote-id={calc.id}
                             data-action="approve"
-                            onclick="handleQuoteAction(this)"
+                            onclick="event.stopPropagation(); handleQuoteAction(this)"
                           >
                             Schváliť
                           </button>
@@ -119,18 +132,20 @@ for (const p of projects) {
                             class="btn-secondary btn-sm text-xs"
                             data-quote-id={calc.id}
                             data-action="reject"
-                            onclick="handleQuoteAction(this)"
+                            onclick="event.stopPropagation(); handleQuoteAction(this)"
                           >
                             Zamietnuť
                           </button>
                         </div>
                       ) : (
-                        <svg class="w-4 h-4 text-adsun-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
+                        <a href={`/quotes/${calc.id}`} class="text-adsun-muted hover:text-white">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                          </svg>
+                        </a>
                       )}
                     </div>
-                  </a>
+                  </div>
                 ))}
               </div>
             )}
@@ -157,6 +172,61 @@ for (const p of projects) {
   // Auto-expand first project
   const firstToggle = document.querySelector('[data-toggle-project]');
   if (firstToggle) firstToggle.click();
+
+  // Reorder — fetch quote detail and add products to cart
+  document.querySelectorAll('.reorder-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const calcId = btn.dataset.calcId;
+      if (!calcId) return;
+
+      btn.disabled = true;
+      const origHTML = btn.innerHTML;
+      btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
+      try {
+        const res = await fetch(`/api/proxy/quotes/${calcId}`);
+        if (!res.ok) throw new Error('Fetch failed');
+        const data = await res.json();
+        const reorderProducts = data.reorderProducts || [];
+
+        if (reorderProducts.length === 0) {
+          alert('Žiadne produkty na opätovné objednanie.');
+          return;
+        }
+
+        const CART_KEY = 'adsun_portal_cart';
+        let cart = [];
+        try { cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch { cart = []; }
+
+        for (const p of reorderProducts) {
+          cart.push({
+            id: 'cart-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+            productId: p.productId,
+            productName: p.productName,
+            productType: p.productType,
+            variantId: p.variantId || null,
+            variantName: p.variantName || null,
+            quantity: p.quantity || 1,
+            parameters: p.parameters || {},
+            notes: '',
+            fileNames: [],
+            categoryId: p.categoryId || null,
+            categoryName: p.categoryName || null,
+            addedAt: new Date().toISOString(),
+          });
+        }
+        localStorage.setItem(CART_KEY, JSON.stringify(cart));
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: cart.length } }));
+        window.location.href = '/cart';
+      } catch (err) {
+        alert('Chyba pri načítavaní produktov.');
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
+      }
+    });
+  });
 
   // Quote approve/reject
   async function handleQuoteAction(btn) {
