@@ -1,0 +1,36 @@
+---
+// ============================================
+// Products - Drill-down katalóg
+// ⭐ Vaše produkty → Kategórie → Podkategórie → Produkty
+// ============================================
+
+import PortalLayout from '@/layouts/portal-layout.astro';
+import PortalHeader from '@/components/portal-header.astro';
+import ProductsCatalog from '@/components/products-catalog';
+import { getSession } from '@/lib/auth';
+import { productsApi } from '@/lib/api-client';
+
+const session = await getSession(Astro.request.headers.get('cookie'));
+if (!session) return Astro.redirect('/');
+
+const res = await productsApi.getCategories(session.token);
+const categories = res.data?.categories || [];
+const clientProducts = res.data?.clientProducts || [];
+
+const totalTemplates = categories.reduce((sum: number, c: any) => sum + (c.templateCount || 0), 0);
+
+const subtitle = clientProducts.length > 0
+  ? `${clientProducts.length} vašich produktov • ${categories.length} kategórií`
+  : `${categories.length} kategórií • ${totalTemplates} produktov`;
+---
+
+<PortalLayout title="Produkty" activeNav="products">
+  <PortalHeader title="Produkty" subtitle={subtitle} />
+
+  <ProductsCatalog
+    client:load
+    categories={categories}
+    clientProducts={clientProducts}
+    clientName={session.clientName}
+  />
+</PortalLayout>

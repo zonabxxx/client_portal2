@@ -1,0 +1,147 @@
+---
+// ============================================
+// Order Detail
+// ============================================
+
+import PortalLayout from '@/layouts/portal-layout.astro';
+import PortalHeader from '@/components/portal-header.astro';
+import { getSession } from '@/lib/auth';
+import { ordersApi } from '@/lib/api-client';
+import { formatCurrency, formatDate, getStatusBadge, translateStatus } from '@/lib/utils';
+
+const session = await getSession(Astro.request.headers.get('cookie'));
+if (!session) return Astro.redirect('/');
+
+const { id } = Astro.params;
+const orderRes = await ordersApi.getById(id!, session.token);
+
+if (!orderRes.success || !orderRes.data) {
+  return Astro.redirect('/orders');
+}
+
+const order = orderRes.data;
+const services = order.services || [];
+const tasks = order.tasks || [];
+---
+
+<PortalLayout title={order.name} activeNav="orders">
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-sm text-adsun-muted mb-4">
+    <a href="/orders" class="hover:text-adsun-orange transition-colors">Zákazky</a>
+    <span>›</span>
+    <span class="text-white">{order.orderNumber}</span>
+  </div>
+
+  <PortalHeader title={order.name} subtitle={`Zákazka ${order.orderNumber}`}>
+    <span class={`badge ${getStatusBadge(order.status)}`}>
+      {translateStatus(order.status)}
+    </span>
+  </PortalHeader>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Info -->
+    <div class="lg:col-span-2 space-y-6">
+      {/* Description */}
+      {order.description && (
+        <div class="glass-card p-5">
+          <h3 class="text-white font-semibold mb-2">Popis</h3>
+          <p class="text-adsun-muted text-sm leading-relaxed">{order.description}</p>
+        </div>
+      )}
+
+      {/* Services */}
+      {services.length > 0 && (
+        <div class="glass-card overflow-hidden">
+          <div class="p-5 border-b border-white/5">
+            <h3 class="text-white font-semibold">Služby ({services.length})</h3>
+          </div>
+          <table class="portal-table">
+            <thead>
+              <tr>
+                <th>Služba</th>
+                <th>Množstvo</th>
+                <th>Cena</th>
+              </tr>
+            </thead>
+            <tbody>
+              {services.map((s: any) => (
+                <tr>
+                  <td class="text-white">{s.serviceName}</td>
+                  <td>{s.quantity} {s.unit || 'ks'}</td>
+                  <td>{formatCurrency(s.totalPrice)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Tasks */}
+      {tasks.length > 0 && (
+        <div class="glass-card overflow-hidden">
+          <div class="p-5 border-b border-white/5">
+            <h3 class="text-white font-semibold">Úlohy ({tasks.length})</h3>
+          </div>
+          <div class="divide-y divide-white/3">
+            {tasks.map((t: any) => (
+              <div class="flex items-center gap-3 p-4">
+                <div class={`w-3 h-3 rounded-full flex-shrink-0 ${t.status === 'completed' ? 'bg-green-400' : t.status === 'in_progress' ? 'bg-adsun-orange' : 'bg-gray-600'}`} />
+                <span class="text-white text-sm flex-1">{t.taskName}</span>
+                <span class="text-adsun-muted text-xs">{translateStatus(t.status)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-4">
+      <div class="glass-card p-5 space-y-4">
+        <h3 class="text-white font-semibold text-sm">Detaily</h3>
+
+        <div>
+          <p class="text-adsun-muted text-xs uppercase tracking-wide">Priorita</p>
+          <p class="text-white text-sm mt-1">{translateStatus(order.priority)}</p>
+        </div>
+
+        <div>
+          <p class="text-adsun-muted text-xs uppercase tracking-wide">Hodnota</p>
+          <p class="text-adsun-orange text-lg font-bold mt-1">{formatCurrency(order.totalValue)}</p>
+        </div>
+
+        <div>
+          <p class="text-adsun-muted text-xs uppercase tracking-wide">Vytvorená</p>
+          <p class="text-white text-sm mt-1">{formatDate(order.createdAt)}</p>
+        </div>
+
+        {order.startDate && (
+          <div>
+            <p class="text-adsun-muted text-xs uppercase tracking-wide">Začiatok</p>
+            <p class="text-white text-sm mt-1">{formatDate(order.startDate)}</p>
+          </div>
+        )}
+
+        {order.plannedEndDate && (
+          <div>
+            <p class="text-adsun-muted text-xs uppercase tracking-wide">Deadline</p>
+            <p class="text-white text-sm mt-1">{formatDate(order.plannedEndDate)}</p>
+          </div>
+        )}
+      </div>
+
+      <!-- NAS Files Link -->
+      <a href={`/files?order=${id}`} class="glass-card p-5 flex items-center gap-3 group cursor-pointer block">
+        <div class="w-9 h-9 rounded-lg bg-adsun-orange/10 flex items-center justify-center">
+          <svg class="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+          </svg>
+        </div>
+        <div>
+          <p class="text-white text-sm font-medium group-hover:text-adsun-orange transition-colors">Súbory zákazky</p>
+          <p class="text-adsun-muted text-xs">Otvoriť na NAS</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</PortalLayout>

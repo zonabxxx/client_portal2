@@ -1,0 +1,51 @@
+---
+// ============================================
+// Portal Layout - Main layout with sidebar + mobile nav
+// ============================================
+
+import '@/styles/global.css';
+import SidebarNav from '@/components/sidebar-nav.astro';
+import MobileNav from '@/components/mobile-nav.astro';
+import AiChatBubble from '@/components/ai-chat-bubble.tsx';
+import { getSession } from '@/lib/auth';
+
+interface Props {
+  title: string;
+  activeNav?: string;
+}
+
+const { title, activeNav } = Astro.props;
+
+// Auth check – redirect to login if no session
+const session = await getSession(Astro.request.headers.get('cookie'));
+if (!session && Astro.url.pathname !== '/') {
+  return Astro.redirect('/');
+}
+
+const clientName = session?.clientName || 'Klient';
+---
+
+<!doctype html>
+<html lang="sk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <title>{title} | AD Sun Portál</title>
+  </head>
+  <body>
+    <SidebarNav activeNav={activeNav} clientName={clientName} />
+
+    <main class="portal-main ml-0 md:ml-[240px] min-h-screen p-4 md:p-8 pb-24 md:pb-8">
+      <slot />
+    </main>
+
+    <MobileNav activeNav={activeNav} />
+
+    <!-- AI Chat Bubble - on every page -->
+    <AiChatBubble client:load />
+  </body>
+</html>

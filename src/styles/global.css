@@ -1,0 +1,380 @@
+/* Font Poppins sa načítava cez <link> v Layout.astro s preconnect */
+@import "tailwindcss";
+
+/* ADSUN Theme – presne rovnaké farby ako web adsun */
+@theme {
+  --color-adsun-orange: #F8991D;
+  --color-adsun-orange-light: #FFAD3D;
+  --color-adsun-orange-dark: #D97706;
+  --color-adsun-black: #0a0a0a;
+  --color-adsun-dark: #111111;
+  --color-adsun-gray: #1a1a1a;
+  --color-adsun-gray-light: #262626;
+  --color-adsun-white: #ffffff;
+  --color-adsun-muted: #9ca3af;
+
+  /* Status */
+  --color-status-success: #22c55e;
+  --color-status-warning: #f59e0b;
+  --color-status-error: #ef4444;
+  --color-status-info: #3b82f6;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  background: #0a0a0a;
+}
+
+body {
+  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+  background: #0a0a0a;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ============================================
+   GLASS CARD (identický s web adsun .glass-card)
+   ============================================ */
+.glass-card {
+  background: rgba(26, 26, 26, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  transition: border-color 0.3s;
+}
+.glass-card:hover {
+  border-color: rgba(248, 153, 29, 0.3);
+}
+
+/* ============================================
+   BUTTONS (identické s web adsun)
+   ============================================ */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #F8991D;
+  color: #0a0a0a;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  padding: 12px 28px;
+  border-radius: 4px;
+  transition: all 0.3s;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+}
+.btn-primary:hover {
+  background: #FFAD3D;
+  transform: scale(0.97);
+  box-shadow: 0 4px 20px rgba(248, 153, 29, 0.3);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: #ffffff;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+  padding: 12px 28px;
+  border-radius: 4px;
+  transition: all 0.3s;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn-secondary:hover {
+  border-color: #F8991D;
+  color: #F8991D;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 12px;
+}
+
+/* ============================================
+   PORTAL SIDEBAR
+   ============================================ */
+.portal-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 240px;
+  background: #0a0a0a;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+
+.portal-sidebar .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #888;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.portal-sidebar .nav-item:hover {
+  color: #F8991D;
+  background: rgba(248, 153, 29, 0.06);
+}
+.portal-sidebar .nav-item.active {
+  color: #F8991D;
+  background: rgba(248, 153, 29, 0.1);
+}
+.portal-sidebar .nav-item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   MOBILE BOTTOM NAV
+   ============================================ */
+@media (max-width: 768px) {
+  .portal-sidebar {
+    display: none;
+  }
+  .portal-main {
+    margin-left: 0 !important;
+  }
+}
+
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #0a0a0a;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 40;
+  padding: 8px 0;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+}
+@media (max-width: 768px) {
+  .mobile-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+}
+
+.mobile-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: #666;
+  font-size: 10px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 4px 8px;
+  transition: color 0.2s;
+}
+.mobile-nav a:hover,
+.mobile-nav a.active {
+  color: #F8991D;
+}
+.mobile-nav a svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ============================================
+   INPUTS (portal style)
+   ============================================ */
+input[type="email"],
+input[type="text"],
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 10px 14px;
+  width: 100%;
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #666;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #F8991D;
+  box-shadow: 0 0 0 3px rgba(248, 153, 29, 0.15);
+}
+
+/* ============================================
+   STATUS BADGES
+   ============================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.badge-draft { background: #374151; color: #d1d5db; }
+.badge-confirmed { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+.badge-in-progress { background: rgba(248,153,29,0.15); color: #FFAD3D; border: 1px solid rgba(248,153,29,0.3); }
+.badge-completed { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+.badge-cancelled { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+.badge-paid { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+.badge-overdue { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+.badge-sent { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+
+/* ============================================
+   SCROLLBAR (identický s web adsun)
+   ============================================ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #F8991D; }
+
+/* ============================================
+   STAT CARDS
+   ============================================ */
+.stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.stat-orange { color: #F8991D; }
+.stat-green { color: #4ade80; }
+.stat-blue { color: #60a5fa; }
+.stat-red { color: #f87171; }
+
+/* ============================================
+   TABLE
+   ============================================ */
+.portal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.portal-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.portal-table td {
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #ccc;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.portal-table tr:hover td {
+  background: rgba(248, 153, 29, 0.03);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+.delay-1 { animation-delay: 0.05s; opacity: 0; }
+.delay-2 { animation-delay: 0.1s; opacity: 0; }
+.delay-3 { animation-delay: 0.15s; opacity: 0; }
+.delay-4 { animation-delay: 0.2s; opacity: 0; }
+
+/* ============================================
+   ORANGE ACCENTS
+   ============================================ */
+.text-accent { color: #F8991D; }
+.divider-orange {
+  height: 2px;
+  background: linear-gradient(90deg, #F8991D 0%, transparent 100%);
+  border: none;
+}
+
+/* ============================================
+   LOADING SKELETON
+   ============================================ */
+.skeleton {
+  background: linear-gradient(90deg, #1a1a1a 25%, #262626 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .stat-number { font-size: 1.5rem; }
+  .portal-table { font-size: 13px; }
+  .portal-table th, .portal-table td { padding: 8px 10px; }
+}
+@media (max-width: 480px) {
+  ::-webkit-scrollbar { width: 0; display: none; }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .glass-card:hover { border-color: rgba(255, 255, 255, 0.06); }
+}

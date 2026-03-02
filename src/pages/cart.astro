@@ -1,0 +1,17 @@
+---
+// ============================================
+// Cart Page — View items + submit order
+// ============================================
+
+import PortalLayout from '@/layouts/portal-layout.astro';
+import CartView from '@/components/cart-view.tsx';
+---
+
+<PortalLayout title="Košík" activeNav="cart">
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold text-white">Košík</h1>
+    <p class="text-adsun-muted text-sm mt-1">Skontrolujte produkty a odošlite objednávku</p>
+  </div>
+
+  <CartView client:load />
+</PortalLayout>

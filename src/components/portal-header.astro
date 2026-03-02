@@ -1,0 +1,20 @@
+---
+// ============================================
+// Portal Header (top bar with page title)
+// ============================================
+
+interface Props {
+  title: string;
+  subtitle?: string;
+}
+
+const { title, subtitle } = Astro.props;
+---
+
+<header class="flex items-center justify-between mb-6 md:mb-8">
+  <div>
+    <h1 class="text-xl md:text-2xl font-bold text-white">{title}</h1>
+    {subtitle && <p class="text-adsun-muted text-sm mt-1">{subtitle}</p>}
+  </div>
+  <slot />
+</header>

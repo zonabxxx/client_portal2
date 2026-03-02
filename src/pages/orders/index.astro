@@ -1,0 +1,35 @@
+---
+// ============================================
+// Orders List - Všetky zákazky klienta
+// ============================================
+
+import PortalLayout from '@/layouts/portal-layout.astro';
+import PortalHeader from '@/components/portal-header.astro';
+import { getSession } from '@/lib/auth';
+import { ordersApi } from '@/lib/api-client';
+
+const session = await getSession(Astro.request.headers.get('cookie'));
+if (!session) return Astro.redirect('/');
+
+const ordersRes = await ordersApi.getAll(session.token);
+const orders = ordersRes.data || [];
+---
+
+<PortalLayout title="Zákazky" activeNav="orders">
+  <PortalHeader title="Zákazky" subtitle={`${orders.length} zákaziek celkom`} />
+
+  <div id="orders-root" data-orders={JSON.stringify(orders)}></div>
+
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import OrdersTable from '@/components/orders-table';
+
+    const container = document.getElementById('orders-root');
+    if (container) {
+      const orders = JSON.parse(container.dataset.orders || '[]');
+      const root = createRoot(container);
+      root.render(createElement(OrdersTable, { orders }));
+    }
+  </script>
+</PortalLayout>

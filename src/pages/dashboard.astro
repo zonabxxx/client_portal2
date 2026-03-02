@@ -1,0 +1,130 @@
+---
+// ============================================
+// Dashboard - Prehľad pre klienta
+// ============================================
+
+import PortalLayout from '@/layouts/portal-layout.astro';
+import PortalHeader from '@/components/portal-header.astro';
+import { getSession } from '@/lib/auth';
+import { dashboardApi } from '@/lib/api-client';
+import { formatCurrency, formatDate, getStatusBadge, translateStatus } from '@/lib/utils';
+
+const session = await getSession(Astro.request.headers.get('cookie'));
+if (!session) return Astro.redirect('/');
+
+const dashRes = await dashboardApi.getStats(session.token);
+const stats = dashRes.data?.stats || { activeOrders: 0, totalOrders: 0, unpaidInvoices: 0, unpaidAmount: 0, totalInvoiced: 0 };
+const recentOrders = dashRes.data?.recentOrders || [];
+---
+
+<PortalLayout title="Prehľad" activeNav="dashboard">
+  <PortalHeader title={`Dobrý deň, ${session.clientName}`} subtitle="Váš prehľad zákaziek a financií" />
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="glass-card p-5">
+      <p class="text-adsun-muted text-xs font-medium uppercase tracking-wide mb-2">Aktívne zákazky</p>
+      <p class="stat-number stat-orange">{stats.activeOrders}</p>
+    </div>
+    <div class="glass-card p-5">
+      <p class="text-adsun-muted text-xs font-medium uppercase tracking-wide mb-2">Celkom zákaziek</p>
+      <p class="stat-number stat-blue">{stats.totalOrders}</p>
+    </div>
+    <div class="glass-card p-5">
+      <p class="text-adsun-muted text-xs font-medium uppercase tracking-wide mb-2">Nezaplatené faktúry</p>
+      <p class="stat-number stat-red">{stats.unpaidInvoices}</p>
+      <p class="text-adsun-muted text-xs mt-1">{formatCurrency(stats.unpaidAmount)}</p>
+    </div>
+    <div class="glass-card p-5">
+      <p class="text-adsun-muted text-xs font-medium uppercase tracking-wide mb-2">Celkom fakturované</p>
+      <p class="stat-number stat-green">{formatCurrency(stats.totalInvoiced)}</p>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <a href="/products" class="glass-card p-5 flex items-center gap-4 group cursor-pointer">
+      <div class="w-10 h-10 rounded-lg bg-adsun-orange/10 flex items-center justify-center group-hover:bg-adsun-orange/20 transition-colors">
+        <svg class="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+      </div>
+      <div>
+        <p class="text-white font-medium text-sm">Nová objednávka</p>
+        <p class="text-adsun-muted text-xs">Objednať produkt z katalógu</p>
+      </div>
+    </a>
+
+    <a href="/ai-search" class="glass-card p-5 flex items-center gap-4 group cursor-pointer">
+      <div class="w-10 h-10 rounded-lg bg-adsun-orange/10 flex items-center justify-center group-hover:bg-adsun-orange/20 transition-colors">
+        <svg class="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+        </svg>
+      </div>
+      <div>
+        <p class="text-white font-medium text-sm">AI Vyhľadávanie</p>
+        <p class="text-adsun-muted text-xs">Nájsť alebo zopakovať zákazku</p>
+      </div>
+    </a>
+
+    <a href="/files" class="glass-card p-5 flex items-center gap-4 group cursor-pointer">
+      <div class="w-10 h-10 rounded-lg bg-adsun-orange/10 flex items-center justify-center group-hover:bg-adsun-orange/20 transition-colors">
+        <svg class="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+        </svg>
+      </div>
+      <div>
+        <p class="text-white font-medium text-sm">Moje súbory</p>
+        <p class="text-adsun-muted text-xs">Prístup k súborom zákaziek</p>
+      </div>
+    </a>
+  </div>
+
+  <!-- Recent Orders -->
+  <div class="glass-card overflow-hidden">
+    <div class="flex items-center justify-between p-5 border-b border-white/5">
+      <h2 class="text-white font-semibold">Posledné zákazky</h2>
+      <a href="/orders" class="text-adsun-orange text-sm font-medium hover:underline">Zobraziť všetky →</a>
+    </div>
+
+    {recentOrders.length === 0 ? (
+      <div class="p-8 text-center text-adsun-muted">
+        <p>Zatiaľ nemáte žiadne zákazky.</p>
+        <a href="/products" class="btn-primary btn-sm mt-4 inline-flex">Objednať produkt</a>
+      </div>
+    ) : (
+      <div class="overflow-x-auto">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Číslo</th>
+              <th>Názov</th>
+              <th>Stav</th>
+              <th class="hidden md:table-cell">Hodnota</th>
+              <th class="hidden md:table-cell">Dátum</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentOrders.map((order: any) => (
+              <tr>
+                <td>
+                  <a href={`/orders/${order.id}`} class="text-adsun-orange font-mono text-sm hover:underline">
+                    {order.orderNumber}
+                  </a>
+                </td>
+                <td class="text-white">{order.name}</td>
+                <td>
+                  <span class={`badge ${getStatusBadge(order.status)}`}>
+                    {translateStatus(order.status)}
+                  </span>
+                </td>
+                <td class="hidden md:table-cell">{formatCurrency(order.totalValue)}</td>
+                <td class="hidden md:table-cell">{formatDate(order.createdAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+</PortalLayout>
