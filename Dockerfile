@@ -15,15 +15,12 @@ ARG PUBLIC_PORTAL_URL
 ENV PUBLIC_API_URL=$PUBLIC_API_URL
 ENV PUBLIC_PORTAL_URL=$PUBLIC_PORTAL_URL
 
-RUN echo "Build with PUBLIC_API_URL=$PUBLIC_API_URL" && npm run build
+RUN npm run build
 
-# Remove devDependencies for smaller image
-RUN npm prune --production
-
-# Verify API routes exist
-RUN echo "=== API Routes ===" && find dist/server/pages/api -name "*.mjs" && echo "=== OK ==="
+# Verify API routes exist (count files)
+RUN find dist/server/pages/api -name "*.mjs" | tee /dev/stderr | wc -l
 
 EXPOSE 8080
 ENV PORT=8080 HOST=0.0.0.0
 
-CMD ["npm", "run", "start"]
+CMD ["node", "dist/server/entry.mjs"]
