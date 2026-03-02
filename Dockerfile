@@ -10,8 +10,8 @@ RUN npm ci --include=dev
 COPY . .
 
 # Pass Railway env vars to Astro build (PUBLIC_* are inlined at build time by Vite)
-ARG PUBLIC_API_URL
-ARG PUBLIC_PORTAL_URL
+ARG PUBLIC_API_URL=https://business-flow-ai.up.railway.app
+ARG PUBLIC_PORTAL_URL=https://clientportal2-production.up.railway.app
 ENV PUBLIC_API_URL=$PUBLIC_API_URL
 ENV PUBLIC_PORTAL_URL=$PUBLIC_PORTAL_URL
 

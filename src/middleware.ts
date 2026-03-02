@@ -8,8 +8,13 @@
 
 import { defineMiddleware } from 'astro:middleware';
 
-const API_BASE = import.meta.env.PUBLIC_API_URL || process.env.PUBLIC_API_URL || 'http://localhost:3000';
-const PORTAL_URL = import.meta.env.PUBLIC_PORTAL_URL || process.env.PUBLIC_PORTAL_URL || 'http://localhost:4000';
+// Runtime: use process.env (set by Railway), fallback to build-time import.meta.env
+function getApiBase() {
+  return process.env.PUBLIC_API_URL || import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+}
+function getPortalUrl() {
+  return process.env.PUBLIC_PORTAL_URL || import.meta.env.PUBLIC_PORTAL_URL || 'http://localhost:4000';
+}
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { request } = context;
@@ -25,10 +30,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
           headers: { 'Content-Type': 'application/json' },
         });
       }
-      const res = await fetch(`${API_BASE}/api/portal/auth/magic-link`, {
+      const apiBase = getApiBase();
+      const portalUrl = getPortalUrl();
+      console.log(`[MIDDLEWARE] Calling ${apiBase}/api/portal/auth/magic-link portalUrl=${portalUrl}`);
+      const res = await fetch(`${apiBase}/api/portal/auth/magic-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, portalUrl: PORTAL_URL }),
+        body: JSON.stringify({ email, portalUrl }),
       });
       const data = await res.json();
       return new Response(JSON.stringify(data), {
