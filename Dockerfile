@@ -15,9 +15,11 @@ ARG PUBLIC_PORTAL_URL
 ENV PUBLIC_API_URL=$PUBLIC_API_URL
 ENV PUBLIC_PORTAL_URL=$PUBLIC_PORTAL_URL
 
-RUN npm run build
+# Clean any Astro cache and build fresh
+RUN rm -rf .astro dist && npm run build
 
-# Verify API routes exist (count files)
+# Verify build output
+RUN grep -o '"checkOrigin":[a-z]*' dist/server/manifest_*.mjs
 RUN find dist/server/pages/api -name "*.mjs" | tee /dev/stderr | wc -l
 
 EXPOSE 8080
