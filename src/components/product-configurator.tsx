@@ -60,6 +60,7 @@ interface Product {
   basePrice?: number;
   baseCost?: number;
   supplierProductCode?: string | null;
+  priceSource?: 'manual' | 'typocon' | 'calculator' | null;
 }
 
 // Valid grammages per material for Typocon templates
@@ -257,7 +258,7 @@ export default function ProductConfigurator({ product }: Props) {
   }
 
   // Check if this is a Typocon template (via priceSource or supplierProductCode fallback)
-  const isTypocon = !isRegularProduct && ((product as any).priceSource === 'typocon' || product.supplierProductCode?.startsWith('typocon:'));
+  const isTypocon = !isRegularProduct && (product.priceSource === 'typocon' || product.supplierProductCode?.startsWith('typocon:'));
 
   // Get valid grammages for selected material (Typocon templates only)
   const selectedMaterial = values.paper || values.material || values.papier || '';
