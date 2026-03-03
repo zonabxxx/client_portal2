@@ -37,6 +37,7 @@ export const GET: APIRoute = async ({ request, redirect }) => {
       clientId: clientData.clientId,
       clientEntityId: clientData.clientEntityId,
       clientName: clientData.clientName || 'Klient',
+      contactName: clientData.contactName || undefined,
       email: clientData.email,
       organizationId: clientData.organizationId,
       storagePath: clientData.storagePath,

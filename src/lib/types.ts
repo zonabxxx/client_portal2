@@ -7,6 +7,7 @@ export interface ClientSession {
   clientId: string;
   clientEntityId: string;
   clientName: string;
+  contactName?: string;
   email: string;
   organizationId: string;
   storagePath?: string;
