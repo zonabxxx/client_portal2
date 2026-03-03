@@ -5,9 +5,10 @@
 
 import PortalLayout from '@/layouts/portal-layout.astro';
 import PortalHeader from '@/components/portal-header.astro';
+import RecentOrdersTable from '@/components/recent-orders-table';
 import { getSession } from '@/lib/auth';
 import { dashboardApi } from '@/lib/api-client';
-import { formatCurrency, formatDate, getStatusBadge, translateStatus } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 
 const session = await getSession(Astro.request.headers.get('cookie'));
 if (!session) return Astro.redirect('/');
@@ -87,44 +88,6 @@ const recentOrders = dashRes.data?.recentOrders || [];
       <a href="/orders" class="text-adsun-orange text-sm font-medium hover:underline">Zobraziť všetky →</a>
     </div>
 
-    {recentOrders.length === 0 ? (
-      <div class="p-8 text-center text-adsun-muted">
-        <p>Zatiaľ nemáte žiadne zákazky.</p>
-        <a href="/products" class="btn-primary btn-sm mt-4 inline-flex">Objednať produkt</a>
-      </div>
-    ) : (
-      <div class="overflow-x-auto">
-        <table class="portal-table">
-          <thead>
-            <tr>
-              <th>Číslo</th>
-              <th>Názov</th>
-              <th>Stav</th>
-              <th class="hidden md:table-cell">Hodnota</th>
-              <th class="hidden md:table-cell">Dátum</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentOrders.map((order: any) => (
-              <tr>
-                <td>
-                  <a href={`/orders/${order.id}`} class="text-adsun-orange font-mono text-sm hover:underline">
-                    {order.orderNumber}
-                  </a>
-                </td>
-                <td class="text-white">{order.name}</td>
-                <td>
-                  <span class={`badge ${getStatusBadge(order.status)}`}>
-                    {translateStatus(order.status)}
-                  </span>
-                </td>
-                <td class="hidden md:table-cell">{formatCurrency(order.totalValue)}</td>
-                <td class="hidden md:table-cell">{formatDate(order.createdAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
+    <RecentOrdersTable client:load orders={recentOrders} />
   </div>
 </PortalLayout>
