@@ -15,6 +15,8 @@ async function portalFetch<T>(
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE}/api/portal/${endpoint}`;
 
+  console.log(`[API] → ${options?.method || 'GET'} ${url} (token: ${token ? token.substring(0, 20) + '...' : 'NONE'})`);
+
   try {
     const res = await fetch(url, {
       ...options,
@@ -25,7 +27,15 @@ async function portalFetch<T>(
       },
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    console.log(`[API] ← ${endpoint} HTTP ${res.status} body: ${text.substring(0, 300)}`);
+
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { success: false, error: `Invalid JSON: ${text.substring(0, 200)}` };
+    }
 
     if (!res.ok) {
       return {
@@ -38,7 +48,7 @@ async function portalFetch<T>(
     return { success: true, data: data as T };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Network error';
-    console.error(`[API] ${endpoint} failed:`, msg);
+    console.error(`[API] ${endpoint} FAILED:`, msg);
     return { success: false, error: msg };
   }
 }
