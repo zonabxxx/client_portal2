@@ -67,6 +67,7 @@ interface Props {
 const ICON_RULES: { keywords: string[]; icon: LucideIcon; label: string }[] = [
   // ─── 1. Najšpecifickejšie produkty ───
   { keywords: ['vizitk', 'business card', 'visit'],           icon: IdCard,              label: 'Vizitky' },
+  { keywords: ['polep', 'car wrap', 'auto polep', 'dodáv'],   icon: Car,                 label: 'Polepy áut' },
   { keywords: ['okien', 'stien', 'výklad', 'window', 'glass'], icon: PanelTop,           label: 'Polep okien' },
   { keywords: ['fóli', 'foil', 'pvc', 'rezané grafik'],       icon: ScrollText,          label: 'PVC fólie' },
 
@@ -89,10 +90,7 @@ const ICON_RULES: { keywords: string[]; icon: LucideIcon; label: string }[] = [
   { keywords: ['pozvánk', 'invitation'],                      icon: Mail,                label: 'Pozvánky' },
   { keywords: ['samolep', 'sticker', 'nálep', 'etike'],       icon: StickyNote,          label: 'Samolepky' },
 
-  // ─── 3. Polepy (po okien/stien, takže správne fallback na auto) ───
-  { keywords: ['polep', 'wrap', 'dodáv', 'vozid'],            icon: Car,                 label: 'Polepy áut' },
-
-  // ─── 4. Hlavné kategórie ───
+  // ─── 3. Hlavné kategórie ───
   { keywords: ['billboard', 'bigboard'],                       icon: RectangleHorizontal, label: 'Billboardy' },
   { keywords: ['tlačov', 'print product', 'tlacov'],          icon: Newspaper,            label: 'Tlačové produkty' },
   { keywords: ['tlač', 'print', 'tisk'],                      icon: FileText,             label: 'Tlač (generic)' },
@@ -135,10 +133,18 @@ function getCategoryIcon(name: string, description?: string): LucideIcon {
   return Package;
 }
 
-/** Ikona pre produkt (kontroluje názov + popis + kategóriu) */
+/** Ikona pre produkt — priorita: 1) názov, 2) názov+popis, 3) názov+popis+kategória */
 function getProductIcon(product: ClientProduct): LucideIcon {
-  const text = `${product.name} ${product.description || ''} ${product.category}`;
-  return getIconForText(text);
+  // 1. Najprv iba názov (najvyššia priorita)
+  const fromName = getIconForText(product.name);
+  if (fromName !== Package) return fromName;
+  // 2. Názov + popis
+  if (product.description) {
+    const fromDesc = getIconForText(`${product.name} ${product.description}`);
+    if (fromDesc !== Package) return fromDesc;
+  }
+  // 3. Celý kontext
+  return getIconForText(`${product.name} ${product.description || ''} ${product.category || ''}`);
 }
 
 // ═══ LEGACY — ponechané pre spätnú kompatibilitu, ale nepoužívajú sa ═══
@@ -1136,15 +1142,15 @@ export default function ProductsCatalog({ categories, clientProducts, clientName
                   >
                     <div className="flex items-stretch">
                       {/* Lucide ikona vľavo */}
-                      <div className="w-24 flex-shrink-0 flex items-center justify-center relative bg-white/[0.02] border-r border-white/[0.05]">
+                      <div className="w-28 flex-shrink-0 flex items-center justify-center relative bg-white/[0.03] border-r border-white/[0.06]">
                         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                           style={{
-                            background: 'radial-gradient(ellipse at 50% 50%, rgba(248,153,29,0.12) 0%, transparent 70%)',
+                            background: 'radial-gradient(ellipse at 50% 50%, rgba(248,153,29,0.18) 0%, transparent 65%)',
                           }}
                         />
                         <ProductIcon
-                          className="w-10 h-10 text-white/30 group-hover:text-adsun-orange/60 transition-colors duration-400"
-                          strokeWidth={1.5}
+                          className="w-12 h-12 text-white/40 group-hover:text-adsun-orange/70 transition-all duration-400 group-hover:scale-110"
+                          strokeWidth={1.3}
                         />
                       </div>
 
