@@ -147,9 +147,7 @@ function getProductIcon(product: ClientProduct): LucideIcon {
   return getIconForText(`${product.name} ${product.description || ''} ${product.category || ''}`);
 }
 
-// ═══ LEGACY — ponechané pre spätnú kompatibilitu, ale nepoužívajú sa ═══
-function getCategorySvg(_name: string): string { return ''; }
-function getProductSvg(_product: ClientProduct): string { return ''; }
+// Legacy SVG functions removed — replaced by Lucide icons
 
 // Pôvodné getCategorySvg bolo tu — nahradené Lucide ikonami
 /*
@@ -727,7 +725,7 @@ function shortenCompanyName(name: string): string {
     .trim();
 }
 
-export default function ProductsCatalog({ categories, clientProducts, clientName }: Props) {
+export default function ProductsCatalog({ categories, clientProducts }: Props) {
   const [search, setSearch] = useState('');
   const [browsePath, setBrowsePath] = useState<{ id: string; name: string }[]>([]);
   const [loadedCategory, setLoadedCategory] = useState<{

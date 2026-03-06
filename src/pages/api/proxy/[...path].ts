@@ -44,7 +44,7 @@ export const ALL: APIRoute = async ({ request, params }) => {
     // Forward body for POST/PUT/PATCH
     // Use arrayBuffer() to support both JSON and multipart/form-data (binary)
     if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
-      fetchOptions.body = Buffer.from(await request.arrayBuffer());
+      fetchOptions.body = new Uint8Array(await request.arrayBuffer());
     }
 
     const res = await fetch(targetUrl, fetchOptions);

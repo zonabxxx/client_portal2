@@ -116,6 +116,21 @@ export default function ProductConfigurator({ product }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [showParts, setShowParts] = useState(false);
+  const [variantDropdownOpen, setVariantDropdownOpen] = useState(false);
+  const variantDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close variant dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (variantDropdownRef.current && !variantDropdownRef.current.contains(e.target as Node)) {
+        setVariantDropdownOpen(false);
+      }
+    }
+    if (variantDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [variantDropdownOpen]);
 
   // ── Real-time price calculation for templates ──
   const [calculatedPrice, setCalculatedPrice] = useState<{
@@ -145,6 +160,22 @@ export default function ProductConfigurator({ product }: Props) {
       return;
     }
 
+    // Don't calculate if quantity parameter exists but is empty or 0
+    // Check both: keys already in params AND product parameter definitions (may not have a value yet)
+    const qtyParam = product.parameters?.find((p) => {
+      const lower = p.parameterName.toLowerCase();
+      const dispLower = p.displayName.toLowerCase();
+      return lower === 'quantity' || lower.includes('mnozstvo') || lower.includes('množstvo')
+        || dispLower.includes('množstvo') || dispLower.includes('mnozstvo') || dispLower.includes('počet');
+    });
+    if (qtyParam) {
+      const qtyVal = parseInt(params[qtyParam.parameterName] || '', 10);
+      if (!qtyVal || qtyVal <= 0) {
+        setCalculatedPrice(null);
+        return;
+      }
+    }
+
     setIsPriceLoading(true);
 
     priceTimerRef.current = setTimeout(async () => {
@@ -172,7 +203,7 @@ export default function ProductConfigurator({ product }: Props) {
         setIsPriceLoading(false);
       }
     }, 600); // 600ms debounce
-  }, [isRegularProduct, product.id]);
+  }, [isRegularProduct, product.id, product.parameters]);
 
   // Trigger price calculation when parameters change
   useEffect(() => {
@@ -395,22 +426,85 @@ export default function ProductConfigurator({ product }: Props) {
 
               return (
                 <>
-                  <div>
+                  <div ref={variantDropdownRef} className="relative">
                     <label className="block text-white text-sm font-medium mb-1.5">
                       Variant <span className="text-red-400 ml-1">*</span>
                     </label>
-                    <select
-                      value={selectedVariantId}
-                      onChange={(e) => setSelectedVariantId(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:border-adsun-orange focus:ring-1 focus:ring-adsun-orange transition-colors"
-                      required
+                    {/* Custom styled dropdown trigger */}
+                    <button
+                      type="button"
+                      onClick={() => setVariantDropdownOpen(!variantDropdownOpen)}
+                      className={`w-full px-4 py-3 rounded-lg bg-white/5 border text-left flex items-center justify-between gap-3 transition-all duration-200 ${
+                        variantDropdownOpen
+                          ? 'border-adsun-orange ring-1 ring-adsun-orange'
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
                     >
-                      {product.variants!.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name}{v.basePrice ? ` — ${v.basePrice.toFixed(2)} €/${v.unit}` : ''}{v.description ? ` (${v.description})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white text-sm font-medium truncate">
+                          {selVariant?.name || 'Vyberte variant...'}
+                        </p>
+                        {selVariant && (
+                          <p className="text-adsun-muted text-xs mt-0.5 truncate">
+                            {selVariant.basePrice ? `${selVariant.basePrice.toFixed(2)} € / ${selVariant.unit}` : ''}
+                            {selVariant.description ? ` · ${selVariant.description}` : ''}
+                          </p>
+                        )}
+                      </div>
+                      <svg
+                        className={`w-4 h-4 text-adsun-muted flex-shrink-0 transition-transform duration-200 ${variantDropdownOpen ? 'rotate-180' : ''}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Dropdown options */}
+                    {variantDropdownOpen && (
+                      <div className="absolute z-50 mt-1.5 w-full rounded-lg bg-[#1a1a2e] border border-white/10 shadow-xl shadow-black/40 overflow-hidden max-h-64 overflow-y-auto">
+                        {product.variants!.map((v) => {
+                          const isSelected = v.id === selectedVariantId;
+                          return (
+                            <button
+                              key={v.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedVariantId(v.id);
+                                setVariantDropdownOpen(false);
+                              }}
+                              className={`w-full px-4 py-3 text-left transition-colors duration-150 border-b border-white/5 last:border-b-0 ${
+                                isSelected
+                                  ? 'bg-adsun-orange/10 border-l-2 border-l-adsun-orange'
+                                  : 'hover:bg-white/5 border-l-2 border-l-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <p className={`text-sm font-medium truncate ${isSelected ? 'text-adsun-orange' : 'text-white'}`}>
+                                    {v.name}
+                                  </p>
+                                  {v.description && (
+                                    <p className="text-adsun-muted text-xs mt-0.5 truncate">{v.description}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {v.basePrice ? (
+                                    <span className={`text-sm font-semibold ${isSelected ? 'text-adsun-orange' : 'text-white/70'}`}>
+                                      {v.basePrice.toFixed(2)} €<span className="text-xs text-adsun-muted">/{v.unit}</span>
+                                    </span>
+                                  ) : null}
+                                  {isSelected && (
+                                    <svg className="w-4 h-4 text-adsun-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-white text-sm font-medium mb-1.5">
@@ -492,17 +586,69 @@ export default function ProductConfigurator({ product }: Props) {
             })()}
 
             {/* ──── Template product: Parameters ──── */}
-            {!isRegularProduct && product.parameters?.length > 0 ? (
-              product.parameters.map((param) => (
-                <div key={param.id}>
-                  <label className="block text-white text-sm font-medium mb-1.5">
-                    {param.displayName}
-                    {param.isRequired && <span className="text-red-400 ml-1">*</span>}
-                  </label>
-                  {renderParam(param)}
-                </div>
-              ))
-            ) : !isRegularProduct ? (
+            {!isRegularProduct && product.parameters?.length > 0 ? (() => {
+              // Check if product has a format parameter at all
+              const hasFormatParam = product.parameters.some((p) => {
+                const n = p.parameterName.toLowerCase();
+                return n === 'format' || n === 'rozmer';
+              });
+              const formatVal = values.format || values.Format || '';
+              const isCustomFormat = !hasFormatParam || /ine|iné|custom|vlastn/i.test(formatVal);
+
+              // Separate dimension params (width/height) from the rest
+              const isDimensionParam = (p: Parameter) => {
+                const n = p.parameterName.toLowerCase();
+                return n.includes('width') || n.includes('height') || n.includes('sirka') || n.includes('vyska');
+              };
+              const isFormatParam = (p: Parameter) => {
+                const n = p.parameterName.toLowerCase();
+                return n === 'format' || n === 'rozmer';
+              };
+
+              const regularParams = product.parameters.filter((p) => !isDimensionParam(p));
+              const dimensionParams = product.parameters.filter((p) => isDimensionParam(p));
+
+              // Find the index of the format param so we can insert dimensions right after it
+              const formatIndex = regularParams.findIndex((p) => isFormatParam(p));
+
+              // Build ordered list: params before format, format, [dimensions if custom], rest
+              const orderedParams: (Parameter | 'dimensions')[] = [];
+              regularParams.forEach((p, i) => {
+                orderedParams.push(p);
+                if (i === formatIndex && isCustomFormat && dimensionParams.length > 0) {
+                  orderedParams.push('dimensions');
+                }
+              });
+
+              return orderedParams.map((item) => {
+                if (item === 'dimensions') {
+                  return (
+                    <div key="custom-dimensions" className="grid grid-cols-2 gap-3">
+                      {dimensionParams.map((dp) => (
+                        <div key={dp.id}>
+                          <label className="block text-white text-sm font-medium mb-1.5">
+                            {dp.displayName}
+                          </label>
+                          {renderParam(dp)}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+
+                const param = item as Parameter;
+                return (
+                  <div key={param.id}>
+                    <label className="block text-white text-sm font-medium mb-1.5">
+                      {param.displayName}
+                      {param.isRequired && <span className="text-red-400 ml-1">*</span>}
+                    </label>
+                    {renderParam(param)}
+                  </div>
+                );
+              });
+            })()
+            : !isRegularProduct ? (
               <p className="text-adsun-muted text-sm py-2">
                 Tento produkt nemá konfigurovateľné parametre. Popíšte vašu požiadavku v poznámkach.
               </p>
