@@ -1,27 +1,168 @@
 ---
 // ============================================
 // Quotes List - Cenové ponuky zoskupené podľa projektov
+// DEMO verzia – bez napojenia na hlavný program
 // ============================================
 
 import PortalLayout from '@/layouts/portal-layout.astro';
 import PortalHeader from '@/components/portal-header.astro';
 import { getSession } from '@/lib/auth';
-import { quotesApi } from '@/lib/api-client';
 import { formatCurrency, formatDate, getStatusBadge, translateStatus } from '@/lib/utils';
 
 const session = await getSession(Astro.request.headers.get('cookie'));
 if (!session) return Astro.redirect('/');
 
-const quotesRes = await quotesApi.getAll(session.token);
-const data = quotesRes.data || { projects: [], totalProjects: 0, totalCalculations: 0 };
-const projects = data.projects || [];
-const totalCalcs = data.totalCalculations || 0;
+// ═══════════════════════════════════════════
+// DEMO DATA – nahradí sa API volaním po napojení
+// ═══════════════════════════════════════════
+const projects = [
+  {
+    id: 'proj-001',
+    name: 'Rebranding Fénix Group 2026',
+    projectNumber: 'PP-2026-0042',
+    totalPrice: 4890.00,
+    createdAt: '2026-02-15T10:30:00Z',
+    calculations: [
+      {
+        id: 'calc-001',
+        name: 'Vizitky – nový dizajn',
+        calculationNumber: 'CC-2026-0087',
+        totalPrice: 245.00,
+        approvalStatus: 'SENT',
+        createdAt: '2026-02-15T11:00:00Z',
+      },
+      {
+        id: 'calc-002',
+        name: 'Hlavičkové papiere A4',
+        calculationNumber: 'CC-2026-0088',
+        totalPrice: 380.00,
+        approvalStatus: 'CLIENT_APPROVED',
+        createdAt: '2026-02-15T11:15:00Z',
+      },
+      {
+        id: 'calc-003',
+        name: 'Firemná brožúra 16str',
+        calculationNumber: 'CC-2026-0089',
+        totalPrice: 1265.00,
+        approvalStatus: 'SENT',
+        createdAt: '2026-02-16T08:30:00Z',
+      },
+      {
+        id: 'calc-004',
+        name: 'Roll-up banner 85×200',
+        calculationNumber: 'CC-2026-0090',
+        totalPrice: 189.00,
+        approvalStatus: 'CLIENT_APPROVED',
+        createdAt: '2026-02-18T14:00:00Z',
+      },
+      {
+        id: 'calc-005',
+        name: 'Obálky C5 s logom',
+        calculationNumber: 'CC-2026-0091',
+        totalPrice: 320.00,
+        approvalStatus: 'DRAFT',
+        createdAt: '2026-02-20T09:00:00Z',
+      },
+      {
+        id: 'calc-006',
+        name: 'Samolepky na produkty',
+        calculationNumber: 'CC-2026-0092',
+        totalPrice: 2491.00,
+        approvalStatus: 'SENT',
+        createdAt: '2026-02-21T10:00:00Z',
+      },
+    ],
+  },
+  {
+    id: 'proj-002',
+    name: 'Polep dodávok – Trans Logistics',
+    projectNumber: 'PP-2026-0038',
+    totalPrice: 6720.00,
+    createdAt: '2026-01-20T09:00:00Z',
+    calculations: [
+      {
+        id: 'calc-010',
+        name: 'Celopolep Sprinter (3 vozidlá)',
+        calculationNumber: 'CC-2026-0070',
+        totalPrice: 4320.00,
+        approvalStatus: 'CLIENT_APPROVED',
+        createdAt: '2026-01-20T10:00:00Z',
+      },
+      {
+        id: 'calc-011',
+        name: 'Polep bočníc Crafter',
+        calculationNumber: 'CC-2026-0071',
+        totalPrice: 1200.00,
+        approvalStatus: 'IN_PROGRESS',
+        createdAt: '2026-01-22T14:00:00Z',
+      },
+      {
+        id: 'calc-012',
+        name: 'Magnetické tabuľky',
+        calculationNumber: 'CC-2026-0072',
+        totalPrice: 1200.00,
+        approvalStatus: 'COMPLETED',
+        createdAt: '2026-01-25T08:00:00Z',
+      },
+    ],
+  },
+  {
+    id: 'proj-003',
+    name: 'Letáky – jarná akcia Gastro Centrum',
+    projectNumber: 'PP-2026-0045',
+    totalPrice: 890.00,
+    createdAt: '2026-03-01T08:00:00Z',
+    calculations: [
+      {
+        id: 'calc-020',
+        name: 'Leták A5 obojstranný 5000ks',
+        calculationNumber: 'CC-2026-0098',
+        totalPrice: 540.00,
+        approvalStatus: 'SENT',
+        createdAt: '2026-03-01T10:00:00Z',
+      },
+      {
+        id: 'calc-021',
+        name: 'Plagát A2 – výloha',
+        calculationNumber: 'CC-2026-0099',
+        totalPrice: 350.00,
+        approvalStatus: 'DRAFT',
+        createdAt: '2026-03-02T09:00:00Z',
+      },
+    ],
+  },
+  {
+    id: 'proj-004',
+    name: 'Svetelná reklama – Hotel Marína',
+    projectNumber: 'PP-2025-0190',
+    totalPrice: 12500.00,
+    createdAt: '2025-11-10T14:00:00Z',
+    calculations: [
+      {
+        id: 'calc-030',
+        name: 'LED svetelný box 3×1m',
+        calculationNumber: 'CC-2025-0410',
+        totalPrice: 8900.00,
+        approvalStatus: 'COMPLETED',
+        createdAt: '2025-11-10T15:00:00Z',
+      },
+      {
+        id: 'calc-031',
+        name: 'Konzola s logom + inštalácia',
+        calculationNumber: 'CC-2025-0411',
+        totalPrice: 3600.00,
+        approvalStatus: 'COMPLETED',
+        createdAt: '2025-11-12T10:00:00Z',
+      },
+    ],
+  },
+];
 
-// Count pending calcs
+const totalCalcs = projects.reduce((sum, p) => sum + p.calculations.length, 0);
 let pendingCount = 0;
 for (const p of projects) {
-  for (const c of p.calculations || []) {
-    if (c.status === 'SENT' || c.approvalStatus === 'SENT') pendingCount++;
+  for (const c of p.calculations) {
+    if (c.approvalStatus === 'SENT') pendingCount++;
   }
 }
 ---
@@ -29,131 +170,134 @@ for (const p of projects) {
 <PortalLayout title="Cenové ponuky" activeNav="quotes">
   <PortalHeader
     title="Cenové ponuky"
-    subtitle={`${projects.length} projektov • ${totalCalcs} kalkulácií • ${pendingCount} čaká na odpoveď`}
+    subtitle={`${projects.length} projektov • ${totalCalcs} kalkulácií • ${pendingCount} čaká na schválenie`}
   />
 
-  {projects.length === 0 ? (
-    <div class="glass-card p-12 text-center text-adsun-muted">
-      <svg class="w-12 h-12 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-      </svg>
-      <p class="text-lg font-medium mb-1">Žiadne cenové ponuky</p>
-      <p class="text-sm">Vaše cenové ponuky sa tu zobrazia po vytvorení.</p>
+  {/* ── Prehľadové štatistiky ── */}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+    <div class="glass-card p-4 text-center">
+      <p class="stat-number stat-orange">{projects.length}</p>
+      <p class="text-adsun-muted text-xs mt-1 uppercase tracking-wide">Projekty</p>
     </div>
-  ) : (
-    <div class="space-y-4">
-      {projects.map((project: any) => (
-        <div class="glass-card overflow-hidden" data-project>
-          {/* Project header */}
-          <button
-            class="w-full flex items-center justify-between p-5 text-left hover:bg-white/5 transition-colors"
-            data-toggle-project
-          >
-            <div class="flex items-center gap-4 min-w-0">
-              <div class="w-10 h-10 rounded-lg bg-adsun-orange/10 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-                </svg>
-              </div>
-              <div class="min-w-0">
-                <h3 class="text-white font-medium truncate">{project.name}</h3>
-                <div class="flex items-center gap-3 text-xs text-adsun-muted mt-0.5">
-                  <span class="font-mono text-adsun-orange/70">{project.projectNumber}</span>
-                  <span>•</span>
-                  <span>{(project.calculations || []).length} kalkulácií</span>
-                  <span>•</span>
-                  <span>{formatDate(project.createdAt)}</span>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-4 flex-shrink-0">
-              <span class="text-adsun-orange font-semibold text-lg hidden sm:block">
-                {formatCurrency(project.totalPrice)}
-              </span>
-              <svg class="w-5 h-5 text-adsun-muted transition-transform duration-200" data-chevron fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    <div class="glass-card p-4 text-center">
+      <p class="stat-number stat-blue">{totalCalcs}</p>
+      <p class="text-adsun-muted text-xs mt-1 uppercase tracking-wide">Kalkulácie</p>
+    </div>
+    <div class="glass-card p-4 text-center">
+      <p class="stat-number stat-green">{pendingCount}</p>
+      <p class="text-adsun-muted text-xs mt-1 uppercase tracking-wide">Čaká na vás</p>
+    </div>
+    <div class="glass-card p-4 text-center">
+      <p class="stat-number stat-orange">{formatCurrency(projects.reduce((s, p) => s + p.totalPrice, 0))}</p>
+      <p class="text-adsun-muted text-xs mt-1 uppercase tracking-wide">Celkom</p>
+    </div>
+  </div>
+
+  {/* ── Zoznam projektov ── */}
+  <div class="space-y-4">
+    {projects.map((project, pIdx) => (
+      <div class="glass-card overflow-hidden animate-in" style={`animation-delay: ${pIdx * 0.06}s; opacity: 0;`} data-project>
+        {/* Project header */}
+        <button
+          class="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.03] transition-colors cursor-pointer"
+          data-toggle-project
+        >
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="w-10 h-10 rounded-lg bg-adsun-orange/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
               </svg>
             </div>
-          </button>
-
-          {/* Calculations list (hidden by default) */}
-          <div class="hidden border-t border-adsun-border" data-calcs-panel>
-            {(project.calculations || []).length === 0 ? (
-              <div class="p-6 text-center text-adsun-muted text-sm">
-                Žiadne kalkulácie v tomto projekte
+            <div class="min-w-0">
+              <h3 class="text-white font-medium truncate">{project.name}</h3>
+              <div class="flex items-center gap-3 text-xs text-adsun-muted mt-0.5">
+                <span class="font-mono text-adsun-orange/70">{project.projectNumber}</span>
+                <span>•</span>
+                <span>{project.calculations.length} {project.calculations.length === 1 ? 'kalkulácia' : project.calculations.length < 5 ? 'kalkulácie' : 'kalkulácií'}</span>
+                <span class="hidden sm:inline">•</span>
+                <span class="hidden sm:inline">{formatDate(project.createdAt)}</span>
               </div>
-            ) : (
-              <div class="divide-y divide-adsun-border/50">
-                {(project.calculations || []).map((calc: any) => (
-                  <div class="px-5 py-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
-                    <a href={`/quotes/${calc.id}`} class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" style="text-decoration:none;">
-                      <div class="w-2 h-2 rounded-full bg-adsun-orange/50 flex-shrink-0"></div>
-                      <div class="min-w-0">
-                        <p class="text-white text-sm font-medium truncate">{calc.name}</p>
-                        <p class="text-adsun-muted text-xs mt-0.5 font-mono">
-                          {calc.calculationNumber}
-                        </p>
-                      </div>
-                    </a>
-                    <div class="flex items-center gap-3 flex-shrink-0">
-                      <span class={`badge ${getStatusBadge(calc.approvalStatus || calc.status)}`}>
-                        {translateStatus(calc.approvalStatus || calc.status)}
-                      </span>
-                      <span class="text-adsun-orange font-medium text-sm min-w-[80px] text-right">
-                        {formatCurrency(calc.totalPrice)}
-                      </span>
-                      <span class="text-adsun-muted text-xs hidden md:block min-w-[80px] text-right">
-                        {formatDate(calc.createdAt)}
-                      </span>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 flex-shrink-0">
+            {/* Pending badge */}
+            {project.calculations.some((c: any) => c.approvalStatus === 'SENT') && (
+              <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-adsun-orange/10 border border-adsun-orange/30 text-adsun-orange text-[11px] font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-adsun-orange animate-pulse"></span>
+                Čaká na vás
+              </span>
+            )}
+            <span class="text-adsun-orange font-semibold text-lg hidden sm:block">
+              {formatCurrency(project.totalPrice)}
+            </span>
+            <svg class="w-5 h-5 text-adsun-muted transition-transform duration-300" data-chevron fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </div>
+        </button>
 
-                      {/* Reorder button */}
-                      <button
-                        class="reorder-btn p-2 rounded-lg hover:bg-adsun-orange/20 text-adsun-muted hover:text-adsun-orange transition-colors"
-                        data-calc-id={calc.id}
-                        title="Objednať znova"
-                        onclick="event.stopPropagation();"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.182-3.182" />
-                        </svg>
-                      </button>
-
-                      {(calc.approvalStatus === 'SENT' || calc.status === 'SENT') ? (
-                        <div class="flex gap-2">
-                          <button
-                            class="btn-primary btn-sm text-xs"
-                            data-quote-id={calc.id}
-                            data-action="approve"
-                            onclick="event.stopPropagation(); handleQuoteAction(this)"
-                          >
-                            Schváliť
-                          </button>
-                          <button
-                            class="btn-secondary btn-sm text-xs"
-                            data-quote-id={calc.id}
-                            data-action="reject"
-                            onclick="event.stopPropagation(); handleQuoteAction(this)"
-                          >
-                            Zamietnuť
-                          </button>
-                        </div>
-                      ) : (
-                        <a href={`/quotes/${calc.id}`} class="text-adsun-muted hover:text-white">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                          </svg>
-                        </a>
-                      )}
+        {/* Calculations list */}
+        <div class="hidden border-t border-white/5" data-calcs-panel>
+          <div class="divide-y divide-white/[0.03]">
+            {project.calculations.map((calc: any) => {
+              const isPending = calc.approvalStatus === 'SENT';
+              return (
+                <a
+                  href={`/quotes/${calc.id}`}
+                  class:list={[
+                    'flex items-center justify-between px-5 py-4 transition-colors group no-underline',
+                    isPending ? 'bg-adsun-orange/[0.03] hover:bg-adsun-orange/[0.06]' : 'hover:bg-white/[0.03]',
+                  ]}
+                >
+                  <div class="flex items-center gap-3 min-w-0 flex-1">
+                    {/* Status dot */}
+                    <div class:list={[
+                      'w-2.5 h-2.5 rounded-full flex-shrink-0',
+                      isPending ? 'bg-adsun-orange shadow-[0_0_6px_rgba(248,153,29,0.5)]' :
+                      calc.approvalStatus === 'CLIENT_APPROVED' || calc.approvalStatus === 'COMPLETED' ? 'bg-green-400' :
+                      calc.approvalStatus === 'CLIENT_REJECTED' ? 'bg-red-400' :
+                      calc.approvalStatus === 'IN_PROGRESS' ? 'bg-blue-400' :
+                      'bg-white/20'
+                    ]}></div>
+                    <div class="min-w-0">
+                      <p class="text-white text-sm font-medium truncate group-hover:text-adsun-orange transition-colors">
+                        {calc.name}
+                      </p>
+                      <p class="text-adsun-muted text-xs mt-0.5 font-mono">{calc.calculationNumber}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div class="flex items-center gap-3 flex-shrink-0">
+                    <span class={`badge ${getStatusBadge(calc.approvalStatus)}`}>
+                      {translateStatus(calc.approvalStatus)}
+                    </span>
+                    <span class="text-adsun-orange font-medium text-sm min-w-[80px] text-right">
+                      {formatCurrency(calc.totalPrice)}
+                    </span>
+                    <span class="text-adsun-muted text-xs hidden md:block min-w-[80px] text-right">
+                      {formatDate(calc.createdAt)}
+                    </span>
+                    <svg class="w-4 h-4 text-adsun-muted group-hover:text-adsun-orange transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+
+          {/* Project summary footer */}
+          <div class="px-5 py-3 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
+            <span class="text-adsun-muted text-xs">
+              Celkom za projekt
+            </span>
+            <span class="text-adsun-orange font-bold text-sm">
+              {formatCurrency(project.totalPrice)}
+            </span>
           </div>
         </div>
-      ))}
-    </div>
-  )}
+      </div>
+    ))}
+  </div>
 </PortalLayout>
 
 <script is:inline>
@@ -169,95 +313,7 @@ for (const p of projects) {
     });
   });
 
-  // Auto-expand first project
+  // Auto-expand first project (which has pending items)
   const firstToggle = document.querySelector('[data-toggle-project]');
   if (firstToggle) firstToggle.click();
-
-  // Reorder — fetch quote detail and add products to cart
-  document.querySelectorAll('.reorder-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const calcId = btn.dataset.calcId;
-      if (!calcId) return;
-
-      btn.disabled = true;
-      const origHTML = btn.innerHTML;
-      btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
-
-      try {
-        const res = await fetch(`/api/proxy/quotes/${calcId}`);
-        if (!res.ok) throw new Error('Fetch failed');
-        const data = await res.json();
-        const reorderProducts = data.reorderProducts || [];
-
-        if (reorderProducts.length === 0) {
-          alert('Žiadne produkty na opätovné objednanie.');
-          return;
-        }
-
-        const CART_KEY = 'adsun_portal_cart';
-        let cart = [];
-        try { cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch { cart = []; }
-
-        for (const p of reorderProducts) {
-          cart.push({
-            id: 'cart-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
-            productId: p.productId,
-            productName: p.productName,
-            productType: p.productType,
-            variantId: p.variantId || null,
-            variantName: p.variantName || null,
-            quantity: p.quantity || 1,
-            parameters: p.parameters || {},
-            notes: '',
-            fileNames: [],
-            categoryId: p.categoryId || null,
-            categoryName: p.categoryName || null,
-            addedAt: new Date().toISOString(),
-          });
-        }
-        localStorage.setItem(CART_KEY, JSON.stringify(cart));
-        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: cart.length } }));
-        window.location.href = '/cart';
-      } catch (err) {
-        alert('Chyba pri načítavaní produktov.');
-        btn.innerHTML = origHTML;
-        btn.disabled = false;
-      }
-    });
-  });
-
-  // Quote approve/reject
-  async function handleQuoteAction(btn) {
-    const quoteId = btn.dataset.quoteId;
-    const action = btn.dataset.action === 'approve' ? 'approved' : 'rejected';
-
-    let comment = '';
-    if (action === 'rejected') {
-      comment = prompt('Dôvod zamietnutia (voliteľné):') || '';
-      if (comment === null) return;
-    }
-
-    try {
-      btn.disabled = true;
-      btn.textContent = '...';
-
-      const res = await fetch(`/api/proxy/quotes/${quoteId}/respond`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, comment }),
-      });
-
-      if (res.ok) {
-        window.location.reload();
-      } else {
-        alert('Chyba pri odpovedi na ponuku');
-      }
-    } catch {
-      alert('Chyba pripojenia');
-    } finally {
-      btn.disabled = false;
-    }
-  }
 </script>
