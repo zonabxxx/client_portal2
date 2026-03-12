@@ -20,6 +20,32 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const { request } = context;
   const url = new URL(request.url);
 
+  // ── POST /api/public-quote/[id]/[token] ── public quote action (approve/reject)
+  const quoteMatch = url.pathname.match(/^\/api\/public-quote\/([^/]+)\/([^/]+)$/);
+  if (quoteMatch && request.method === 'POST') {
+    const [, qId, qToken] = quoteMatch;
+    try {
+      const apiBase = getApiBase();
+      const body = await request.text();
+      const res = await fetch(`${apiBase}/api/public/quote/${qId}/${qToken}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      const data = await res.text();
+      return new Response(data, {
+        status: res.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      console.error('[MIDDLEWARE] public-quote POST error:', err);
+      return new Response(JSON.stringify({ error: 'Server error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
   // ── POST /api/auth/magic-link/request ──
   if (url.pathname === '/api/auth/magic-link/request' && request.method === 'POST') {
     try {

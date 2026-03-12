@@ -1,7 +1,7 @@
 ---
 // ============================================
 // Quote Detail — Kompletný detail cenovej ponuky
-// DEMO verzia – bez napojenia na hlavný program
+// Napojené na API /api/portal/quotes/[id]
 // ============================================
 
 import PortalLayout from '@/layouts/portal-layout.astro';
@@ -13,435 +13,47 @@ const session = await getSession(Astro.request.headers.get('cookie'));
 if (!session) return Astro.redirect('/');
 
 const { id } = Astro.params;
+const API_BASE = process.env.PUBLIC_API_URL || import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
-// ═══════════════════════════════════════════
-// DEMO DATA – nahradí sa API volaním po napojení
-// ═══════════════════════════════════════════
-const demoQuotes: Record<string, any> = {
-  'calc-001': {
-    id: 'calc-001',
-    name: 'Vizitky – nový dizajn',
-    calculationNumber: 'CC-2026-0087',
-    approvalStatus: 'SENT',
-    totalPrice: 245.00,
-    createdAt: '2026-02-15T11:00:00Z',
-    validUntil: '2026-03-15T23:59:00Z',
-    notes: 'Vizitky budú vytlačené na 350g matnom kridovom papieri s jednostranným matným laminom. Dodacia lehota 5 pracovných dní od schválenia grafiky.',
-    categoryName: 'Digitálna tlač',
-    project: {
-      id: 'proj-001',
-      name: 'Rebranding Fénix Group 2026',
-      projectNumber: 'PP-2026-0042',
-      totalPrice: 4890.00,
-    },
-    products: [
-      {
-        id: 'prod-1',
-        name: 'Vizitka jednostranná 90×50mm',
-        quantity: 500,
-        unit: 'ks',
-        totalSale: 89.00,
-        templateConfigLabels: { 'Formát': '90×50mm', 'Papier': 'Kriedový matný 350g', 'Tlač': 'CMYK 4+0', 'Lamino': 'Matný jednostranný' },
-        materials: [
-          { name: 'Kriedový papier matný 350g/m² SRA3', quantity: 12, unit: 'arch' },
-          { name: 'Matná laminácia', quantity: 0.5, unit: 'm²' },
-        ],
-        services: [
-          { name: 'Digitálna tlač CMYK', quantity: 12, unit: 'arch' },
-          { name: 'Rezanie na formát', quantity: 500, unit: 'ks' },
-        ],
-      },
-      {
-        id: 'prod-2',
-        name: 'Vizitka obojstranná 90×50mm',
-        quantity: 1000,
-        unit: 'ks',
-        totalSale: 156.00,
-        templateConfigLabels: { 'Formát': '90×50mm', 'Papier': 'Kriedový matný 350g', 'Tlač': 'CMYK 4+4', 'Lamino': 'Matný obojstranný' },
-        materials: [
-          { name: 'Kriedový papier matný 350g/m² SRA3', quantity: 24, unit: 'arch' },
-          { name: 'Matná laminácia obojstranná', quantity: 1.2, unit: 'm²' },
-        ],
-        services: [
-          { name: 'Digitálna tlač CMYK obojstranná', quantity: 24, unit: 'arch' },
-          { name: 'Rezanie na formát', quantity: 1000, unit: 'ks' },
-          { name: 'Kontrola kvality', quantity: 1, unit: 'hod' },
-        ],
-      },
-    ],
-    communication: [
-      { type: 'system', message: 'Cenová ponuka vytvorená', date: '2026-02-15T11:00:00Z' },
-      { type: 'admin', author: 'Martin Kováč', message: 'Dobrý deň, pripravili sme pre Vás cenovú ponuku na vizitky podľa vašich špecifikácií. V prípade otázok som k dispozícii.', date: '2026-02-15T11:30:00Z' },
-      { type: 'system', message: 'Ponuka odoslaná klientovi', date: '2026-02-15T11:35:00Z' },
-    ],
-  },
-  'calc-002': {
-    id: 'calc-002',
-    name: 'Hlavičkové papiere A4',
-    calculationNumber: 'CC-2026-0088',
-    approvalStatus: 'CLIENT_APPROVED',
-    totalPrice: 380.00,
-    createdAt: '2026-02-15T11:15:00Z',
-    validUntil: '2026-03-15T23:59:00Z',
-    notes: 'Tlač na nekrídový biely papier 100g. Farebná hlavička + šedý päta.',
-    categoryName: 'Digitálna tlač',
-    project: {
-      id: 'proj-001',
-      name: 'Rebranding Fénix Group 2026',
-      projectNumber: 'PP-2026-0042',
-      totalPrice: 4890.00,
-    },
-    products: [
-      {
-        id: 'prod-3',
-        name: 'Hlavičkový papier A4',
-        quantity: 2000,
-        unit: 'ks',
-        totalSale: 380.00,
-        templateConfigLabels: { 'Formát': 'A4', 'Papier': 'Nekrídový biely 100g', 'Tlač': 'CMYK 4+0' },
-        materials: [
-          { name: 'Nekrídový biely papier 100g/m² A4', quantity: 2100, unit: 'arch' },
-        ],
-        services: [
-          { name: 'Digitálna tlač CMYK', quantity: 42, unit: 'arch' },
-          { name: 'Rezanie na formát', quantity: 2000, unit: 'ks' },
-        ],
-      },
-    ],
-    communication: [
-      { type: 'system', message: 'Cenová ponuka vytvorená', date: '2026-02-15T11:15:00Z' },
-      { type: 'admin', author: 'Martin Kováč', message: 'Ponuka na hlavičkové papiere – 2000ks na nekrídovom 100g papieri.', date: '2026-02-15T11:20:00Z' },
-      { type: 'system', message: 'Ponuka odoslaná klientovi', date: '2026-02-15T11:25:00Z' },
-      { type: 'client', author: 'Barbora Skálová', message: 'Ďakujem, súhlasíme. Schvaľujem ponuku.', date: '2026-02-16T09:00:00Z' },
-      { type: 'system', message: 'Ponuka schválená klientom', date: '2026-02-16T09:00:00Z' },
-    ],
-  },
-  'calc-003': {
-    id: 'calc-003',
-    name: 'Firemná brožúra 16str',
-    calculationNumber: 'CC-2026-0089',
-    approvalStatus: 'SENT',
-    totalPrice: 1265.00,
-    createdAt: '2026-02-16T08:30:00Z',
-    validUntil: '2026-03-20T23:59:00Z',
-    notes: 'Brožúra 16 strán, väzba V2 (sponková), plnofarebná obojstranná tlač. Obálka na 250g kriedovom lesku, vnútro na 135g kriedovom matnom.',
-    categoryName: 'Offsetová tlač',
-    project: {
-      id: 'proj-001',
-      name: 'Rebranding Fénix Group 2026',
-      projectNumber: 'PP-2026-0042',
-      totalPrice: 4890.00,
-    },
-    products: [
-      {
-        id: 'prod-4',
-        name: 'Brožúra A4 – obálka',
-        quantity: 500,
-        unit: 'ks',
-        totalSale: 485.00,
-        templateConfigLabels: { 'Formát': 'A4', 'Papier': 'Kriedový lesk 250g', 'Tlač': 'CMYK 4+4', 'Lamino': 'Matný' },
-        materials: [
-          { name: 'Kriedový lesk 250g/m² SRA3', quantity: 520, unit: 'arch' },
-          { name: 'Matná laminácia', quantity: 2.4, unit: 'm²' },
-        ],
-        services: [
-          { name: 'Offsetová tlač CMYK obojstranná', quantity: 520, unit: 'arch' },
-          { name: 'Bigovanie', quantity: 500, unit: 'ks' },
-        ],
-      },
-      {
-        id: 'prod-5',
-        name: 'Brožúra A4 – vnútro 12str',
-        quantity: 500,
-        unit: 'ks',
-        totalSale: 580.00,
-        templateConfigLabels: { 'Formát': 'A4', 'Papier': 'Kriedový matný 135g', 'Tlač': 'CMYK 4+4', 'Strany': '12' },
-        materials: [
-          { name: 'Kriedový matný 135g/m² SRA3', quantity: 1560, unit: 'arch' },
-        ],
-        services: [
-          { name: 'Offsetová tlač CMYK obojstranná', quantity: 1560, unit: 'arch' },
-          { name: 'Sponková väzba V2', quantity: 500, unit: 'ks' },
-          { name: 'Rezanie na formát', quantity: 500, unit: 'ks' },
-        ],
-      },
-      {
-        id: 'prod-6',
-        name: 'Grafická príprava – DTP',
-        quantity: 1,
-        unit: 'hod',
-        totalSale: 200.00,
-        templateConfigLabels: { 'Typ': 'DTP služba' },
-        materials: [],
-        services: [
-          { name: 'DTP spracovanie podkladov', quantity: 4, unit: 'hod' },
-          { name: 'Kontrola pred tlačou (preflight)', quantity: 1, unit: 'hod' },
-        ],
-      },
-    ],
-    communication: [
-      { type: 'system', message: 'Cenová ponuka vytvorená', date: '2026-02-16T08:30:00Z' },
-      { type: 'admin', author: 'Martin Kováč', message: 'Pripravili sme ponuku na 16-stranovú brožúru. Obálka je na 250g kriedovom lesku s matným laminom, vnútro na 135g kriedovom matnom. Sponková väzba V2. Prosím o schválenie.', date: '2026-02-16T09:00:00Z' },
-      { type: 'system', message: 'Ponuka odoslaná klientovi', date: '2026-02-16T09:05:00Z' },
-      { type: 'client', author: 'Barbora Skálová', message: 'Mohli by ste mi poslať ukážku papiera, prosím?', date: '2026-02-17T14:00:00Z' },
-      { type: 'admin', author: 'Martin Kováč', message: 'Samozrejme, vzorky papierov som pripravil. Môžete si ich vyzdvihnúť u nás alebo vám ich pošleme kuriérom.', date: '2026-02-17T15:30:00Z' },
-    ],
-  },
-  'calc-006': {
-    id: 'calc-006',
-    name: 'Samolepky na produkty',
-    calculationNumber: 'CC-2026-0092',
-    approvalStatus: 'SENT',
-    totalPrice: 2491.00,
-    createdAt: '2026-02-21T10:00:00Z',
-    validUntil: '2026-03-25T23:59:00Z',
-    notes: 'Samolepky na rôzne tvary produktov. PVC lesklá samolepka, odolná voči vode. Rezanie na CNC plotri.',
-    categoryName: 'Samolepky',
-    project: {
-      id: 'proj-001',
-      name: 'Rebranding Fénix Group 2026',
-      projectNumber: 'PP-2026-0042',
-      totalPrice: 4890.00,
-    },
-    products: [
-      {
-        id: 'prod-7',
-        name: 'Produktová samolepka kruhová Ø50mm',
-        quantity: 5000,
-        unit: 'ks',
-        totalSale: 891.00,
-        templateConfigLabels: { 'Formát': 'Kruh Ø50mm', 'Materiál': 'PVC lesk biely', 'Tlač': 'CMYK', 'Rezanie': 'CNC kontúrové' },
-        materials: [
-          { name: 'PVC samolepka lesklá biela', quantity: 8, unit: 'm²' },
-        ],
-        services: [
-          { name: 'UV tlač CMYK', quantity: 8, unit: 'm²' },
-          { name: 'CNC kontúrové rezanie', quantity: 5000, unit: 'ks' },
-        ],
-      },
-      {
-        id: 'prod-8',
-        name: 'Produktová samolepka obdĺžnik 80×40mm',
-        quantity: 10000,
-        unit: 'ks',
-        totalSale: 1600.00,
-        templateConfigLabels: { 'Formát': '80×40mm', 'Materiál': 'PVC lesk biely', 'Tlač': 'CMYK', 'Rezanie': 'CNC kontúrové' },
-        materials: [
-          { name: 'PVC samolepka lesklá biela', quantity: 32, unit: 'm²' },
-        ],
-        services: [
-          { name: 'UV tlač CMYK', quantity: 32, unit: 'm²' },
-          { name: 'CNC kontúrové rezanie', quantity: 10000, unit: 'ks' },
-          { name: 'Navíjanie na kotúč', quantity: 10, unit: 'ks' },
-        ],
-      },
-    ],
-    communication: [
-      { type: 'system', message: 'Cenová ponuka vytvorená', date: '2026-02-21T10:00:00Z' },
-      { type: 'admin', author: 'Martin Kováč', message: 'Ponuka na produktové samolepky – PVC lesklé, kontúrové rezanie na CNC plotri. Odolné voči vode a UV žiareniu.', date: '2026-02-21T10:30:00Z' },
-      { type: 'system', message: 'Ponuka odoslaná klientovi', date: '2026-02-21T10:35:00Z' },
-    ],
-  },
-  'calc-010': {
-    id: 'calc-010',
-    name: 'Celopolep Sprinter (3 vozidlá)',
-    calculationNumber: 'CC-2026-0070',
-    approvalStatus: 'CLIENT_APPROVED',
-    totalPrice: 4320.00,
-    createdAt: '2026-01-20T10:00:00Z',
-    validUntil: '2026-02-20T23:59:00Z',
-    notes: 'Celopolep 3 vozidiel Mercedes Sprinter. Cast wrap fólia + laminát. Inštalácia v našej dielni. Predpokladaný termín realizácie: 3 pracovné dni na vozidlo.',
-    categoryName: 'Polepy áut',
-    project: {
-      id: 'proj-002',
-      name: 'Polep dodávok – Trans Logistics',
-      projectNumber: 'PP-2026-0038',
-      totalPrice: 6720.00,
-    },
-    products: [
-      {
-        id: 'prod-10',
-        name: 'Celopolep Mercedes Sprinter L3H2',
-        quantity: 3,
-        unit: 'ks',
-        totalSale: 4320.00,
-        templateConfigLabels: { 'Vozidlo': 'Mercedes Sprinter L3H2', 'Typ': 'Celopolep', 'Fólia': 'Cast wrap', 'Laminát': 'Matný' },
-        materials: [
-          { name: 'Cast wrap fólia biela', quantity: 75, unit: 'm²' },
-          { name: 'Laminát matný', quantity: 75, unit: 'm²' },
-          { name: 'Transfer tape', quantity: 15, unit: 'm' },
-        ],
-        services: [
-          { name: 'Tlač veľkoformát solvent', quantity: 75, unit: 'm²' },
-          { name: 'Laminácia', quantity: 75, unit: 'm²' },
-          { name: 'Inštalácia – celopolep dodávky', quantity: 9, unit: 'dní' },
-          { name: 'Grafický návrh wrap dizajn', quantity: 8, unit: 'hod' },
-        ],
-      },
-    ],
-    communication: [
-      { type: 'system', message: 'Cenová ponuka vytvorená', date: '2026-01-20T10:00:00Z' },
-      { type: 'admin', author: 'Peter Novák', message: 'Pripravili sme ponuku na celopolep 3 Sprinterov. Použijeme cast wrap fóliu s matným laminátom pre dlhšiu životnosť.', date: '2026-01-20T10:30:00Z' },
-      { type: 'system', message: 'Ponuka odoslaná klientovi', date: '2026-01-20T10:35:00Z' },
-      { type: 'client', author: 'Ján Trnka', message: 'Ponuku schvaľujem. Kedy je najskorší možný termín?', date: '2026-01-21T08:00:00Z' },
-      { type: 'system', message: 'Ponuka schválená klientom', date: '2026-01-21T08:00:00Z' },
-      { type: 'admin', author: 'Peter Novák', message: 'Ďakujeme za schválenie. Prvé vozidlo môžeme začať poliepiť od pondelka 27.1.2026. Prosím dohodnite si termín pristavenia vozidiel.', date: '2026-01-21T09:30:00Z' },
-    ],
-  },
-  'calc-020': {
-    id: 'calc-020',
-    name: 'Leták A5 obojstranný 5000ks',
-    calculationNumber: 'CC-2026-0098',
-    approvalStatus: 'SENT',
-    totalPrice: 540.00,
-    createdAt: '2026-03-01T10:00:00Z',
-    validUntil: '2026-04-01T23:59:00Z',
-    notes: 'Letáky A5 obojstranná plnofarebná tlač na 135g kriedovom matnom papieri. Vhodné pre distribúciu do schránok.',
-    categoryName: 'Maloformátová tlač',
-    project: {
-      id: 'proj-003',
-      name: 'Letáky – jarná akcia Gastro Centrum',
-      projectNumber: 'PP-2026-0045',
-      totalPrice: 890.00,
-    },
-    products: [
-      {
-        id: 'prod-20',
-        name: 'Leták A5 obojstranný',
-        quantity: 5000,
-        unit: 'ks',
-        totalSale: 540.00,
-        templateConfigLabels: { 'Formát': 'A5', 'Papier': 'Kriedový matný 135g', 'Tlač': 'CMYK 4+4' },
-        materials: [
-          { name: 'Kriedový matný papier 135g/m² SRA3', quantity: 650, unit: 'arch' },
-        ],
-        services: [
-          { name: 'Offsetová tlač CMYK obojstranná', quantity: 650, unit: 'arch' },
-          { name: 'Rezanie na A5', quantity: 5000, unit: 'ks' },
-          { name: 'Balenie po 250ks', quantity: 20, unit: 'bal' },
-        ],
-      },
-    ],
-    communication: [
-      { type: 'system', message: 'Cenová ponuka vytvorená', date: '2026-03-01T10:00:00Z' },
-      { type: 'admin', author: 'Martin Kováč', message: 'Ponuka na 5000ks letákov A5 obojstranná tlač. Dodanie do 5 pracovných dní.', date: '2026-03-01T10:30:00Z' },
-      { type: 'system', message: 'Ponuka odoslaná klientovi', date: '2026-03-01T10:35:00Z' },
-    ],
-  },
-  'calc-030': {
-    id: 'calc-030',
-    name: 'LED svetelný box 3×1m',
-    calculationNumber: 'CC-2025-0410',
-    approvalStatus: 'COMPLETED',
-    totalPrice: 8900.00,
-    createdAt: '2025-11-10T15:00:00Z',
-    validUntil: '2025-12-10T23:59:00Z',
-    notes: 'LED svetelný box s hliníkovým rámom, obojstranný s grafickou výmenou. Vonkajšie prevedenie IP65. Vrátane montáže na fasádu.',
-    categoryName: 'Svetelná reklama',
-    project: {
-      id: 'proj-004',
-      name: 'Svetelná reklama – Hotel Marína',
-      projectNumber: 'PP-2025-0190',
-      totalPrice: 12500.00,
-    },
-    products: [
-      {
-        id: 'prod-30',
-        name: 'LED svetelný box 3000×1000mm',
-        quantity: 1,
-        unit: 'ks',
-        totalSale: 6200.00,
-        templateConfigLabels: { 'Rozmer': '3000×1000mm', 'Typ': 'Obojstranný', 'Rám': 'Hliník elox.', 'Krytie': 'IP65' },
-        materials: [
-          { name: 'Hliníkový profil eloxovaný', quantity: 8, unit: 'm' },
-          { name: 'LED modul 12V biely 6500K', quantity: 48, unit: 'ks' },
-          { name: 'Difúzna doska plexisklo opal', quantity: 6, unit: 'm²' },
-          { name: 'Napájací zdroj 12V 150W IP67', quantity: 2, unit: 'ks' },
-          { name: 'Grafická fólia translucent', quantity: 6, unit: 'm²' },
-        ],
-        services: [
-          { name: 'Výroba rámu – zváračské práce', quantity: 8, unit: 'hod' },
-          { name: 'Elektroinštalácia LED', quantity: 4, unit: 'hod' },
-          { name: 'Tlač grafiky translucent', quantity: 6, unit: 'm²' },
-          { name: 'Montáž na fasádu', quantity: 6, unit: 'hod' },
-        ],
-      },
-      {
-        id: 'prod-31',
-        name: 'Grafický návrh svetelného boxu',
-        quantity: 1,
-        unit: 'hod',
-        totalSale: 350.00,
-        templateConfigLabels: { 'Typ': 'Grafický dizajn' },
-        materials: [],
-        services: [
-          { name: 'Grafický dizajn', quantity: 6, unit: 'hod' },
-          { name: '3D vizualizácia', quantity: 2, unit: 'hod' },
-        ],
-      },
-      {
-        id: 'prod-32',
-        name: 'Doprava a montáž',
-        quantity: 1,
-        unit: 'komplet',
-        totalSale: 2350.00,
-        templateConfigLabels: { 'Typ': 'Montáž' },
-        materials: [
-          { name: 'Kotviaci materiál nerez', quantity: 1, unit: 'sada' },
-          { name: 'Kabeláž vonkajšia', quantity: 15, unit: 'm' },
-        ],
-        services: [
-          { name: 'Doprava s plošinou', quantity: 1, unit: 'výjazd' },
-          { name: 'Montáž na fasádu s plošinou', quantity: 8, unit: 'hod' },
-          { name: 'Elektrické zapojenie', quantity: 3, unit: 'hod' },
-        ],
-      },
-    ],
-    communication: [
-      { type: 'system', message: 'Cenová ponuka vytvorená', date: '2025-11-10T15:00:00Z' },
-      { type: 'admin', author: 'Peter Novák', message: 'Ponuka na LED svetelný box 3×1m obojstranný s montážou na fasádu. Hliníkový rám, krytie IP65, vonkajšie prevedenie.', date: '2025-11-10T15:30:00Z' },
-      { type: 'system', message: 'Ponuka odoslaná klientovi', date: '2025-11-10T15:35:00Z' },
-      { type: 'client', author: 'Igor Marín', message: 'Schvaľujem, prosím o čo najskorší termín montáže.', date: '2025-11-11T10:00:00Z' },
-      { type: 'system', message: 'Ponuka schválená klientom', date: '2025-11-11T10:00:00Z' },
-      { type: 'admin', author: 'Peter Novák', message: 'Výroba začne ihneď, odhadovaný čas výroby 10-12 pracovných dní. Montáž naplánujeme na 25.-26.11.', date: '2025-11-11T11:00:00Z' },
-      { type: 'system', message: 'Zákazka dokončená', date: '2025-11-26T16:00:00Z' },
-    ],
-  },
-};
+let calc: any = null;
+let fetchError = '';
 
-// Fallback pre neznáme ID
-const calc = demoQuotes[id!] || {
-  id: id,
-  name: 'Kalkulácia',
-  calculationNumber: 'CC-DEMO',
-  approvalStatus: 'DRAFT',
-  totalPrice: 0,
-  createdAt: new Date().toISOString(),
-  validUntil: null,
-  notes: null,
-  categoryName: null,
-  project: null,
-  products: [],
-  communication: [],
-};
+try {
+  const res = await fetch(`${API_BASE}/api/portal/quotes/${id}`, {
+    headers: { Authorization: `Bearer ${session.token}` },
+  });
+  if (!res.ok) {
+    fetchError = res.status === 404 ? 'Kalkulácia nebola nájdená' : `Chyba (${res.status})`;
+  } else {
+    calc = await res.json();
+  }
+} catch {
+  fetchError = 'Nepodarilo sa spojiť so serverom';
+}
 
-const project = calc.project;
-const products = calc.products || [];
-const communication = calc.communication || [];
+const project = calc?.project;
+const products = calc?.products || [];
 
-// Calculate unit prices
 const enrichedProducts = products.map((p: any) => {
   const qty = p.quantity || 1;
-  const unitPrice = qty > 0 ? p.totalSale / qty : 0;
-  return { ...p, unitPrice };
+  const unitPrice = qty > 0 ? (p.totalSale || 0) / qty : 0;
+  const tc = p.templateConfigLabels || p.templateConfig;
+  let specs: {key: string, value: string}[] = [];
+  if (tc && typeof tc === 'object') {
+    specs = Object.entries(tc).filter(([k,v]) => k && v && k !== 'undefined' && k !== 'templateId' && k !== 'templateName')
+      .map(([k,v]) => ({key: k, value: String(v)}));
+  }
+  return { ...p, unitPrice, specs };
 });
 
-const isPending = calc.approvalStatus === 'SENT';
-const isApproved = calc.approvalStatus === 'CLIENT_APPROVED';
-const isCompleted = calc.approvalStatus === 'COMPLETED';
+const isPending = calc?.approvalStatus === 'SENT';
+const isApproved = calc?.approvalStatus === 'CLIENT_APPROVED';
+const isCompleted = calc?.approvalStatus === 'COMPLETED';
+const totalPrice = calc?.totalPrice || 0;
+const shareUrl = calc?.shareUrl || null;
 ---
 
-<PortalLayout title={calc.name || 'Detail ponuky'} activeNav="quotes">
+<PortalLayout title={calc?.name || 'Detail ponuky'} activeNav="quotes">
   {/* ── Breadcrumb ── */}
   <div class="flex items-center gap-2 text-sm text-adsun-muted mb-4">
     <a href="/quotes" class="hover:text-adsun-orange transition-colors">Cenové ponuky</a>
@@ -452,454 +64,345 @@ const isCompleted = calc.approvalStatus === 'COMPLETED';
         <span class="text-white/20">›</span>
       </>
     )}
-    <span class="text-white">{calc.calculationNumber}</span>
+    <span class="text-white">{calc?.calculationNumber || id}</span>
   </div>
 
-  <PortalHeader title={calc.name || 'Kalkulácia'} subtitle={calc.calculationNumber}>
-    <span class={`badge ${getStatusBadge(calc.approvalStatus)}`}>
-      {translateStatus(calc.approvalStatus)}
-    </span>
-  </PortalHeader>
+  {fetchError ? (
+    <div class="glass-card p-12 text-center">
+      <div class="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </div>
+      <h2 class="text-white text-lg font-semibold mb-2">Chyba</h2>
+      <p class="text-adsun-muted text-sm">{fetchError}</p>
+      <a href="/quotes" class="btn-secondary inline-flex mt-4 text-sm">← Späť na ponuky</a>
+    </div>
+  ) : calc && (
+    <>
+      <PortalHeader title={calc.name || 'Kalkulácia'} subtitle={calc.calculationNumber}>
+        <span class={`badge ${getStatusBadge(calc.approvalStatus)}`}>
+          {translateStatus(calc.approvalStatus)}
+        </span>
+      </PortalHeader>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    {/* ════════════════════════════════════════
-        HLAVNÝ OBSAH (2/3)
-        ════════════════════════════════════════ */}
-    <div class="lg:col-span-2 space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ═══ HLAVNÝ OBSAH (2/3) ═══ */}
+        <div class="lg:col-span-2 space-y-6">
 
-      {/* ── Upozornenie ak čaká na schválenie ── */}
-      {isPending && (
-        <div class="glass-card p-5 border-adsun-orange/30 bg-adsun-orange/[0.04] animate-in" style="animation-delay: 0s; opacity: 0;">
-          <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-full bg-adsun-orange/15 flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-              </svg>
+          {/* ── Upozornenie ak čaká na schválenie ── */}
+          {isPending && (
+            <div class="glass-card p-5 border-adsun-orange/30 bg-adsun-orange/[0.04] animate-in" style="animation-delay: 0s; opacity: 0;">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-full bg-adsun-orange/15 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-white font-semibold text-sm">Čaká na vaše schválenie</h3>
+                  <p class="text-adsun-muted text-sm mt-1">
+                    Táto ponuka bola pripravená a čaká na vašu odpoveď. Môžete ju schváliť, zamietnuť alebo požiadať o zmeny.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h3 class="text-white font-semibold text-sm">Čaká na vaše schválenie</h3>
-              <p class="text-adsun-muted text-sm mt-1">
-                Táto ponuka bola pripravená a čaká na vašu odpoveď. Môžete ju schváliť, zamietnuť alebo požiadať o zmeny.
-              </p>
-              {calc.validUntil && (
-                <p class="text-adsun-muted text-xs mt-2">
-                  Platnosť ponuky do: <span class="text-white font-medium">{formatDate(calc.validUntil)}</span>
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* ── Produkty ── */}
-      {enrichedProducts.length > 0 && (
-        <div class="space-y-4">
-          <h2 class="text-white/60 text-xs uppercase tracking-widest font-semibold">
-            Produkty ({enrichedProducts.length})
-          </h2>
+          {/* ── Produkty ── */}
+          {enrichedProducts.length > 0 && (
+            <div class="space-y-4">
+              <h2 class="text-white/60 text-xs uppercase tracking-widest font-semibold">
+                Produkty ({enrichedProducts.length})
+              </h2>
 
-          {enrichedProducts.map((product: any, idx: number) => (
-            <div class="glass-card overflow-hidden animate-in" style={`animation-delay: ${(idx + 1) * 0.06}s; opacity: 0;`}>
-              <div class="p-5">
-                {/* Product header */}
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0 flex-1">
-                    <h3 class="text-white font-medium text-base">{product.name}</h3>
+              {enrichedProducts.map((product: any, idx: number) => (
+                <div class="glass-card overflow-hidden animate-in" style={`animation-delay: ${(idx + 1) * 0.06}s; opacity: 0;`}>
+                  <div class="p-5">
+                    <div class="flex items-start justify-between gap-4">
+                      <div class="min-w-0 flex-1">
+                        <h3 class="text-white font-medium text-base">{product.name}</h3>
+                        {product.specs.length > 0 && (
+                          <div class="flex flex-wrap gap-1.5 mt-2">
+                            {product.specs.map((s: any) => (
+                              <span class="text-[11px] px-2 py-0.5 rounded-md bg-white/5 text-adsun-muted border border-white/5">
+                                <span class="text-white/40">{s.key}:</span> {s.value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div class="w-8 h-8 rounded-lg bg-adsun-orange/10 flex items-center justify-center flex-shrink-0">
+                        <span class="text-adsun-orange text-xs font-bold">{idx + 1}</span>
+                      </div>
+                    </div>
 
-                    {/* Config labels */}
-                    {product.templateConfigLabels && Object.keys(product.templateConfigLabels).length > 0 && (
-                      <div class="flex flex-wrap gap-1.5 mt-2">
-                        {Object.entries(product.templateConfigLabels).map(([key, value]: [string, any]) => (
-                          <span class="text-[11px] px-2 py-0.5 rounded-md bg-white/5 text-adsun-muted border border-white/5">
-                            <span class="text-white/40">{key}:</span> {value}
-                          </span>
-                        ))}
+                    <div class="mt-4 pt-4 border-t border-white/5">
+                      {product.totalSale > 0 ? (
+                        <div class="grid grid-cols-3 gap-4">
+                          <div>
+                            <p class="text-adsun-muted text-xs uppercase tracking-wide">Cena/{product.unit || 'ks'}</p>
+                            <p class="text-white font-medium text-sm mt-1">{formatCurrency(product.unitPrice)}</p>
+                          </div>
+                          <div>
+                            <p class="text-adsun-muted text-xs uppercase tracking-wide">Množstvo</p>
+                            <p class="text-white font-medium text-sm mt-1">
+                              {(Number(product.quantity) || 1).toLocaleString('sk-SK')} {product.unit || 'ks'}
+                            </p>
+                          </div>
+                          <div class="text-right">
+                            <p class="text-adsun-muted text-xs uppercase tracking-wide">Celkom</p>
+                            <p class="text-adsun-orange font-semibold text-lg mt-1">{formatCurrency(product.totalSale)}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div class="text-center text-adsun-muted text-sm py-2 bg-white/[0.02] rounded-lg">
+                          Cena bude doplnená po spracovaní kalkulácie.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Expandable parts */}
+                    {((product.materials?.length > 0) || (product.services?.length > 0)) && (
+                      <div class="mt-4">
+                        <button
+                          class="product-detail-toggle flex items-center gap-1.5 text-xs text-adsun-muted hover:text-adsun-orange transition-colors cursor-pointer"
+                          data-target={`parts-${idx}`}
+                        >
+                          <svg class="toggle-icon w-3.5 h-3.5 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                          <span class="toggle-label">Zobraziť zloženie produktu</span>
+                        </button>
+
+                        <div id={`parts-${idx}`} class="product-parts hidden mt-3 pl-1 space-y-3">
+                          {product.materials?.length > 0 && (
+                            <div>
+                              <p class="text-[10px] font-semibold text-adsun-muted uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                <svg class="w-3 h-3 text-adsun-orange/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                                </svg>
+                                Materiály
+                              </p>
+                              <div class="space-y-1.5">
+                                {product.materials.map((m: any) => (
+                                  <div class="flex items-center gap-2 text-sm text-white/70">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-adsun-orange/40 flex-shrink-0"></span>
+                                    <span class="flex-1">{m.name}</span>
+                                    <span class="text-adsun-muted text-xs font-mono">{m.quantity} {m.unit}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {product.services?.length > 0 && (
+                            <div>
+                              <p class="text-[10px] font-semibold text-adsun-muted uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                <svg class="w-3 h-3 text-blue-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.74-3.31a1 1 0 010-1.72l5.74-3.31a1 1 0 011.16 0l5.74 3.31a1 1 0 010 1.72l-5.74 3.31a1 1 0 01-1.16 0z" />
+                                </svg>
+                                Služby
+                              </p>
+                              <div class="space-y-1.5">
+                                {product.services.map((s: any) => (
+                                  <div class="flex items-center gap-2 text-sm text-white/70">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400/40 flex-shrink-0"></span>
+                                    <span class="flex-1">{s.name}</span>
+                                    <span class="text-adsun-muted text-xs font-mono">{s.quantity} {s.unit}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  {/* Product index */}
-                  <div class="w-8 h-8 rounded-lg bg-adsun-orange/10 flex items-center justify-center flex-shrink-0">
-                    <span class="text-adsun-orange text-xs font-bold">{idx + 1}</span>
-                  </div>
                 </div>
+              ))}
+            </div>
+          )}
 
-                {/* Price breakdown */}
-                <div class="mt-4 pt-4 border-t border-white/5">
-                  {product.totalSale && product.totalSale > 0 ? (
-                    <div class="grid grid-cols-3 gap-4">
-                      <div>
-                        <p class="text-adsun-muted text-xs uppercase tracking-wide">Cena/{product.unit || 'ks'}</p>
-                        <p class="text-white font-medium text-sm mt-1">{formatCurrency(product.unitPrice)}</p>
-                      </div>
-                      <div>
-                        <p class="text-adsun-muted text-xs uppercase tracking-wide">Množstvo</p>
-                        <p class="text-white font-medium text-sm mt-1">
-                          {product.quantity?.toLocaleString('sk-SK')} {product.unit || 'ks'}
-                        </p>
-                      </div>
-                      <div class="text-right">
-                        <p class="text-adsun-muted text-xs uppercase tracking-wide">Celkom</p>
-                        <p class="text-adsun-orange font-semibold text-lg mt-1">{formatCurrency(product.totalSale)}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div class="text-center text-adsun-muted text-sm py-2 bg-white/[0.02] rounded-lg">
-                      Cena bude doplnená po spracovaní kalkulácie.
-                    </div>
-                  )}
-                </div>
+          {/* ── Poznámky ── */}
+          {calc.notes && (
+            <div class="glass-card p-5 animate-in" style={`animation-delay: ${(enrichedProducts.length + 1) * 0.06}s; opacity: 0;`}>
+              <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold mb-3 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-adsun-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                </svg>
+                Poznámky
+              </h3>
+              <p class="text-adsun-muted text-sm leading-relaxed">{calc.notes}</p>
+            </div>
+          )}
 
-                {/* Expandable parts */}
-                {((product.materials?.length > 0) || (product.services?.length > 0)) && (
-                  <div class="mt-4">
-                    <button
-                      class="product-detail-toggle flex items-center gap-1.5 text-xs text-adsun-muted hover:text-adsun-orange transition-colors cursor-pointer"
-                      data-target={`parts-${idx}`}
-                    >
-                      <svg class="toggle-icon w-3.5 h-3.5 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                      <span class="toggle-label">Zobraziť zloženie produktu</span>
-                    </button>
+          {/* Empty state */}
+          {products.length === 0 && (
+            <div class="glass-card p-12 text-center text-adsun-muted">
+              <p class="text-lg font-medium mb-1">Žiadne produkty v kalkulácii</p>
+              <p class="text-sm">Kalkulácia zatiaľ neobsahuje žiadne produkty.</p>
+            </div>
+          )}
+        </div>
 
-                    <div id={`parts-${idx}`} class="product-parts hidden mt-3 pl-1 space-y-3">
-                      {/* Materials */}
-                      {product.materials?.length > 0 && (
-                        <div>
-                          <p class="text-[10px] font-semibold text-adsun-muted uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                            <svg class="w-3 h-3 text-adsun-orange/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                            </svg>
-                            Materiály
-                          </p>
-                          <div class="space-y-1.5">
-                            {product.materials.map((m: any) => (
-                              <div class="flex items-center gap-2 text-sm text-white/70">
-                                <span class="w-1.5 h-1.5 rounded-full bg-adsun-orange/40 flex-shrink-0"></span>
-                                <span class="flex-1">{m.name}</span>
-                                <span class="text-adsun-muted text-xs font-mono">{m.quantity} {m.unit}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+        {/* ═══ SIDEBAR (1/3) ═══ */}
+        <div class="space-y-4">
+          {/* ── Súhrn ── */}
+          <div class="glass-card p-5 space-y-4 animate-in" style="animation-delay: 0.05s; opacity: 0;">
+            <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold">Súhrn</h3>
 
-                      {/* Services */}
-                      {product.services?.length > 0 && (
-                        <div>
-                          <p class="text-[10px] font-semibold text-adsun-muted uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                            <svg class="w-3 h-3 text-blue-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.74-3.31a1 1 0 010-1.72l5.74-3.31a1 1 0 011.16 0l5.74 3.31a1 1 0 010 1.72l-5.74 3.31a1 1 0 01-1.16 0z" />
-                            </svg>
-                            Služby
-                          </p>
-                          <div class="space-y-1.5">
-                            {product.services.map((s: any) => (
-                              <div class="flex items-center gap-2 text-sm text-white/70">
-                                <span class="w-1.5 h-1.5 rounded-full bg-blue-400/40 flex-shrink-0"></span>
-                                <span class="flex-1">{s.name}</span>
-                                <span class="text-adsun-muted text-xs font-mono">{s.quantity} {s.unit}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+            <div>
+              <p class="text-adsun-muted text-xs uppercase tracking-wide">Celková cena</p>
+              <p class="text-adsun-orange text-2xl font-bold mt-1">{formatCurrency(totalPrice)}</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <p class="text-adsun-muted text-xs uppercase tracking-wide">Stav</p>
+                <p class="mt-1">
+                  <span class={`badge ${getStatusBadge(calc.approvalStatus)}`}>
+                    {translateStatus(calc.approvalStatus)}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <p class="text-adsun-muted text-xs uppercase tracking-wide">Produkty</p>
+                <p class="text-white text-sm mt-1 font-medium">
+                  {enrichedProducts.length} {enrichedProducts.length === 1 ? 'produkt' : enrichedProducts.length < 5 ? 'produkty' : 'produktov'}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p class="text-adsun-muted text-xs uppercase tracking-wide">Vytvorená</p>
+              <p class="text-white text-sm mt-1">{formatDate(calc.createdAt)}</p>
+            </div>
+
+            {calc.categoryName && (
+              <div>
+                <p class="text-adsun-muted text-xs uppercase tracking-wide">Kategória</p>
+                <p class="text-white text-sm mt-1">{calc.categoryName}</p>
+              </div>
+            )}
+          </div>
+
+          {/* ── Zobraziť ponuku (link na verejnú stránku) ── */}
+          {shareUrl && (
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="glass-card p-4 flex items-center gap-3 hover:border-adsun-orange/40 transition-colors group animate-in"
+              style="animation-delay: 0.08s; opacity: 0;"
+            >
+              <div class="w-10 h-10 rounded-lg bg-adsun-orange/10 flex items-center justify-center flex-shrink-0 group-hover:bg-adsun-orange/20 transition-colors">
+                <svg class="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-white text-sm font-medium">Zobraziť ponuku klienta</p>
+                <p class="text-adsun-muted text-xs">Otvoriť ponuku tak, ako ju vidí klient</p>
+              </div>
+              <svg class="w-4 h-4 text-adsun-muted group-hover:text-adsun-orange transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </a>
+          )}
+
+          {/* ── Projekt ── */}
+          {project && (
+            <div class="glass-card p-5 space-y-3 animate-in" style="animation-delay: 0.1s; opacity: 0;">
+              <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold">Projekt</h3>
+              <div>
+                <p class="text-white text-sm font-medium">{project.name}</p>
+                {project.projectNumber && (
+                  <p class="text-adsun-muted text-xs font-mono mt-0.5">{project.projectNumber}</p>
                 )}
               </div>
+              {project.totalPrice > 0 && (
+                <div>
+                  <p class="text-adsun-muted text-xs uppercase tracking-wide">Celková hodnota projektu</p>
+                  <p class="text-adsun-orange font-semibold mt-0.5">{formatCurrency(project.totalPrice)}</p>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* ── Poznámky ── */}
-      {calc.notes && (
-        <div class="glass-card p-5 animate-in" style={`animation-delay: ${(enrichedProducts.length + 1) * 0.06}s; opacity: 0;`}>
-          <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold mb-3 flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5 text-adsun-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-            </svg>
-            Poznámky
-          </h3>
-          <p class="text-adsun-muted text-sm leading-relaxed">{calc.notes}</p>
-        </div>
-      )}
-
-      {/* ── História komunikácie ── */}
-      {communication.length > 0 && (
-        <div class="glass-card p-5 animate-in" style={`animation-delay: ${(enrichedProducts.length + 2) * 0.06}s; opacity: 0;`}>
-          <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold mb-4 flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5 text-adsun-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
-            </svg>
-            História komunikácie
-          </h3>
-
-          <div class="relative">
-            {/* Timeline line */}
-            <div class="absolute left-[11px] top-3 bottom-3 w-px bg-white/10"></div>
-
-            <div class="space-y-4">
-              {communication.map((msg: any) => {
-                const isSystem = msg.type === 'system';
-                const isClient = msg.type === 'client';
-                const isAdmin = msg.type === 'admin';
-
-                return (
-                  <div class="flex gap-3 relative">
-                    {/* Dot */}
-                    <div class:list={[
-                      'w-[23px] h-[23px] rounded-full flex items-center justify-center flex-shrink-0 z-10',
-                      isSystem ? 'bg-white/10' :
-                      isClient ? 'bg-adsun-orange/20 border border-adsun-orange/30' :
-                      'bg-blue-500/20 border border-blue-500/30',
-                    ]}>
-                      {isSystem ? (
-                        <svg class="w-3 h-3 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      ) : isClient ? (
-                        <svg class="w-3 h-3 text-adsun-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                        </svg>
-                      ) : (
-                        <svg class="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0" />
-                        </svg>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div class="flex-1 min-w-0 pb-1">
-                      {isSystem ? (
-                        <p class="text-adsun-muted text-xs italic">{msg.message}</p>
-                      ) : (
-                        <div class:list={[
-                          'rounded-lg p-3',
-                          isClient ? 'bg-adsun-orange/[0.06] border border-adsun-orange/10' :
-                          'bg-white/[0.03] border border-white/5',
-                        ]}>
-                          <div class="flex items-center justify-between mb-1">
-                            <span class:list={[
-                              'text-xs font-semibold',
-                              isClient ? 'text-adsun-orange' : 'text-blue-400'
-                            ]}>
-                              {msg.author}
-                            </span>
-                            <span class="text-adsun-muted text-[10px]">
-                              {isClient ? 'Vy' : 'AD Sun'}
-                            </span>
-                          </div>
-                          <p class="text-white/80 text-sm leading-relaxed">{msg.message}</p>
-                        </div>
-                      )}
-                      <p class="text-adsun-muted text-[10px] mt-1 ml-1">{formatDate(msg.date)}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Formulár na správu (ak čaká na schválenie) */}
+          {/* ── Akcie — Schválenie / Zamietnutie ── */}
           {isPending && (
-            <div class="mt-6 pt-4 border-t border-white/5">
-              <label class="text-white/60 text-xs uppercase tracking-widest font-semibold block mb-2">
-                Vaša odpoveď
-              </label>
-              <textarea
-                id="client-message"
-                rows="3"
-                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder:text-white/20 focus:border-adsun-orange focus:ring-1 focus:ring-adsun-orange/30 transition-colors resize-none"
-                placeholder="Napíšte správu alebo otázku..."
-              ></textarea>
-              <div class="flex gap-2 mt-3">
-                <button
-                  id="btn-send-message"
-                  class="btn-secondary btn-sm text-xs flex items-center gap-1.5"
-                >
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                  </svg>
-                  Odoslať otázku
-                </button>
+            <div class="glass-card p-5 space-y-3 animate-in" style="animation-delay: 0.15s; opacity: 0;">
+              <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold">Akcie</h3>
+              <button id="btn-approve" class="btn-primary w-full text-sm flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                Schváliť ponuku
+              </button>
+              <button id="btn-reject" class="btn-secondary w-full text-sm flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Zamietnuť ponuku
+              </button>
+              <button id="btn-request-changes" class="btn-secondary w-full text-sm flex items-center justify-center gap-2 border-yellow-500/30 text-yellow-400 hover:border-yellow-500 hover:text-yellow-300">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+                Požiadať o zmeny
+              </button>
+            </div>
+          )}
+
+          {isApproved && (
+            <div class="glass-card p-5 space-y-3 animate-in border-green-500/20" style="animation-delay: 0.15s; opacity: 0;">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 class="text-green-400 font-semibold text-sm">Ponuka schválená</h3>
+              </div>
+              <p class="text-adsun-muted text-sm">Táto ponuka bola schválená. Zákazka je v procese spracovania.</p>
+            </div>
+          )}
+
+          {isCompleted && (
+            <div class="glass-card p-5 space-y-3 animate-in border-green-500/20" style="animation-delay: 0.15s; opacity: 0;">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                </svg>
+                <h3 class="text-green-400 font-semibold text-sm">Zákazka dokončená</h3>
+              </div>
+              <p class="text-adsun-muted text-sm">Zákazka bola úspešne zrealizovaná a dokončená.</p>
+            </div>
+          )}
+
+          {/* ── Rozpad ceny ── */}
+          {enrichedProducts.length > 1 && (
+            <div class="glass-card p-5 animate-in" style="animation-delay: 0.2s; opacity: 0;">
+              <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold mb-3">Rozpad ceny</h3>
+              <div class="space-y-2.5">
+                {enrichedProducts.map((p: any) => (
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-adsun-muted truncate mr-3">{p.name}</span>
+                    <span class="text-white font-medium flex-shrink-0">{formatCurrency(p.totalSale || 0)}</span>
+                  </div>
+                ))}
+                <div class="border-t border-white/10 pt-2.5 flex items-center justify-between">
+                  <span class="text-white font-semibold text-sm">Spolu</span>
+                  <span class="text-adsun-orange font-bold text-base">{formatCurrency(totalPrice)}</span>
+                </div>
               </div>
             </div>
           )}
         </div>
-      )}
-
-      {/* Empty state */}
-      {products.length === 0 && (
-        <div class="glass-card p-12 text-center text-adsun-muted">
-          <p class="text-lg font-medium mb-1">Žiadne produkty v kalkulácii</p>
-          <p class="text-sm">Kalkulácia zatiaľ neobsahuje žiadne produkty.</p>
-        </div>
-      )}
-    </div>
-
-    {/* ════════════════════════════════════════
-        SIDEBAR (1/3)
-        ════════════════════════════════════════ */}
-    <div class="space-y-4">
-      {/* ── Súhrn ── */}
-      <div class="glass-card p-5 space-y-4 animate-in" style="animation-delay: 0.05s; opacity: 0;">
-        <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold">Súhrn</h3>
-
-        <div>
-          <p class="text-adsun-muted text-xs uppercase tracking-wide">Celková cena</p>
-          <p class="text-adsun-orange text-2xl font-bold mt-1">{formatCurrency(calc.totalPrice)}</p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <p class="text-adsun-muted text-xs uppercase tracking-wide">Stav</p>
-            <p class="mt-1">
-              <span class={`badge ${getStatusBadge(calc.approvalStatus)}`}>
-                {translateStatus(calc.approvalStatus)}
-              </span>
-            </p>
-          </div>
-          <div>
-            <p class="text-adsun-muted text-xs uppercase tracking-wide">Produkty</p>
-            <p class="text-white text-sm mt-1 font-medium">
-              {enrichedProducts.length} {enrichedProducts.length === 1 ? 'produkt' : enrichedProducts.length < 5 ? 'produkty' : 'produktov'}
-            </p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <p class="text-adsun-muted text-xs uppercase tracking-wide">Vytvorená</p>
-            <p class="text-white text-sm mt-1">{formatDate(calc.createdAt)}</p>
-          </div>
-          {calc.validUntil && (
-            <div>
-              <p class="text-adsun-muted text-xs uppercase tracking-wide">Platí do</p>
-              <p class="text-white text-sm mt-1">{formatDate(calc.validUntil)}</p>
-            </div>
-          )}
-        </div>
-
-        {calc.categoryName && (
-          <div>
-            <p class="text-adsun-muted text-xs uppercase tracking-wide">Kategória</p>
-            <p class="text-white text-sm mt-1">{calc.categoryName}</p>
-          </div>
-        )}
       </div>
-
-      {/* ── Projekt ── */}
-      {project && (
-        <div class="glass-card p-5 space-y-3 animate-in" style="animation-delay: 0.1s; opacity: 0;">
-          <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold">Projekt</h3>
-          <div>
-            <p class="text-white text-sm font-medium">{project.name}</p>
-            <p class="text-adsun-muted text-xs font-mono mt-0.5">{project.projectNumber}</p>
-          </div>
-          <div>
-            <p class="text-adsun-muted text-xs uppercase tracking-wide">Celková hodnota projektu</p>
-            <p class="text-adsun-orange font-semibold mt-0.5">{formatCurrency(project.totalPrice)}</p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Akcie — Schválenie / Zamietnutie ── */}
-      {isPending && (
-        <div class="glass-card p-5 space-y-3 animate-in" style="animation-delay: 0.15s; opacity: 0;">
-          <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold">Akcie</h3>
-          <button
-            id="btn-approve"
-            class="btn-primary w-full text-sm flex items-center justify-center gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-            Schváliť ponuku
-          </button>
-          <button
-            id="btn-reject"
-            class="btn-secondary w-full text-sm flex items-center justify-center gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Zamietnuť ponuku
-          </button>
-          <button
-            id="btn-request-changes"
-            class="btn-secondary w-full text-sm flex items-center justify-center gap-2 border-yellow-500/30 text-yellow-400 hover:border-yellow-500 hover:text-yellow-300"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-            </svg>
-            Požiadať o zmeny
-          </button>
-        </div>
-      )}
-
-      {/* ── Info ak schválená ── */}
-      {isApproved && (
-        <div class="glass-card p-5 space-y-3 animate-in border-green-500/20" style="animation-delay: 0.15s; opacity: 0;">
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h3 class="text-green-400 font-semibold text-sm">Ponuka schválená</h3>
-          </div>
-          <p class="text-adsun-muted text-sm">
-            Táto ponuka bola schválená. Zákazka je v procese spracovania.
-          </p>
-        </div>
-      )}
-
-      {/* ── Info ak dokončená ── */}
-      {isCompleted && (
-        <div class="glass-card p-5 space-y-3 animate-in border-green-500/20" style="animation-delay: 0.15s; opacity: 0;">
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-            </svg>
-            <h3 class="text-green-400 font-semibold text-sm">Zákazka dokončená</h3>
-          </div>
-          <p class="text-adsun-muted text-sm">
-            Zákazka bola úspešne zrealizovaná a dokončená.
-          </p>
-          <button class="btn-primary w-full text-sm flex items-center justify-center gap-2" id="btn-reorder">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.182-3.182" />
-            </svg>
-            Objednať znova
-          </button>
-        </div>
-      )}
-
-      {/* ── Cena po produktoch ── */}
-      {enrichedProducts.length > 1 && (
-        <div class="glass-card p-5 animate-in" style="animation-delay: 0.2s; opacity: 0;">
-          <h3 class="text-white/60 text-xs uppercase tracking-widest font-semibold mb-3">Rozpad ceny</h3>
-          <div class="space-y-2.5">
-            {enrichedProducts.map((p: any) => (
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-adsun-muted truncate mr-3">{p.name}</span>
-                <span class="text-white font-medium flex-shrink-0">{formatCurrency(p.totalSale)}</span>
-              </div>
-            ))}
-            <div class="border-t border-white/10 pt-2.5 flex items-center justify-between">
-              <span class="text-white font-semibold text-sm">Spolu</span>
-              <span class="text-adsun-orange font-bold text-base">{formatCurrency(calc.totalPrice)}</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  </div>
+    </>
+  )}
 </PortalLayout>
 
 <script is:inline define:vars={{ calcId: id }}>
-  // ── Toggle product parts ──
   document.querySelectorAll('.product-detail-toggle').forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-target');
@@ -907,50 +410,46 @@ const isCompleted = calc.approvalStatus === 'COMPLETED';
       const icon = btn.querySelector('.toggle-icon');
       const label = btn.querySelector('.toggle-label');
       if (!target) return;
-
       const isHidden = target.classList.contains('hidden');
       target.classList.toggle('hidden');
       if (icon) icon.style.transform = isHidden ? 'rotate(90deg)' : '';
-      if (label) label.textContent = isHidden
-        ? 'Skryť zloženie produktu'
-        : 'Zobraziť zloženie produktu';
+      if (label) label.textContent = isHidden ? 'Skryť zloženie produktu' : 'Zobraziť zloženie produktu';
     });
   });
 
-  // ── DEMO: Approve ──
-  document.getElementById('btn-approve')?.addEventListener('click', () => {
+  async function respondToQuote(action, comment) {
+    try {
+      const res = await fetch(`/api/proxy/quotes/${calcId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, comment }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Chyba pri odoslaní odpovede.');
+        return false;
+      }
+      return true;
+    } catch {
+      alert('Chyba siete. Skúste to znova.');
+      return false;
+    }
+  }
+
+  document.getElementById('btn-approve')?.addEventListener('click', async () => {
     if (!confirm('Naozaj chcete schváliť túto ponuku?')) return;
-    alert('DEMO: Ponuka by bola schválená. (Zatiaľ nie je napojené na backend.)');
+    if (await respondToQuote('approved')) location.reload();
   });
 
-  // ── DEMO: Reject ──
-  document.getElementById('btn-reject')?.addEventListener('click', () => {
+  document.getElementById('btn-reject')?.addEventListener('click', async () => {
     const comment = prompt('Dôvod zamietnutia (voliteľné):');
     if (comment === null) return;
-    alert('DEMO: Ponuka by bola zamietnutá. (Zatiaľ nie je napojené na backend.)');
+    if (await respondToQuote('rejected', comment || undefined)) location.reload();
   });
 
-  // ── DEMO: Request changes ──
-  document.getElementById('btn-request-changes')?.addEventListener('click', () => {
+  document.getElementById('btn-request-changes')?.addEventListener('click', async () => {
     const changes = prompt('Aké zmeny požadujete?');
     if (!changes) return;
-    alert('DEMO: Požiadavka na zmeny by bola odoslaná. (Zatiaľ nie je napojené na backend.)');
-  });
-
-  // ── DEMO: Send message ──
-  document.getElementById('btn-send-message')?.addEventListener('click', () => {
-    const textarea = document.getElementById('client-message');
-    const message = textarea?.value?.trim();
-    if (!message) {
-      alert('Prosím napíšte správu.');
-      return;
-    }
-    alert('DEMO: Správa by bola odoslaná. (Zatiaľ nie je napojené na backend.)');
-    textarea.value = '';
-  });
-
-  // ── DEMO: Reorder ──
-  document.getElementById('btn-reorder')?.addEventListener('click', () => {
-    alert('DEMO: Produkty by boli pridané do košíka. (Zatiaľ nie je napojené na backend.)');
+    if (await respondToQuote('requested_changes', changes)) location.reload();
   });
 </script>
