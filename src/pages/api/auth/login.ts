@@ -47,9 +47,15 @@ export const POST: APIRoute = async ({ request }) => {
         'Set-Cookie': setSessionCookie(jwt),
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[AUTH] Login error:', err);
-    return new Response(JSON.stringify({ error: 'Prihlásenie zlyhalo.' }), {
+    const msg = err?.message || 'Unknown error';
+    const hint = msg.includes('JWT') || msg.includes('secret') || msg.includes('PORTAL_JWT_SECRET')
+      ? 'PORTAL_JWT_SECRET nie je nastavený v environment variables.'
+      : msg.includes('fetch') || msg.includes('ECONNREFUSED')
+      ? `Nepodarilo sa pripojiť na API (${API_BASE}).`
+      : 'Prihlásenie zlyhalo.';
+    return new Response(JSON.stringify({ error: hint, detail: msg }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
