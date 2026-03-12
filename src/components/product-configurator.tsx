@@ -45,6 +45,28 @@ interface Variant {
   services?: VariantPart[];
 }
 
+interface ProcessFlowParam {
+  id: string;
+  name: string;
+  type: string;
+  required: boolean;
+  dependsOn: string | null;
+  options: { id: string; label: string; value: string; parentValue: string | null }[];
+}
+
+interface ProcessFlowModuleMap {
+  moduleId: string;
+  moduleName: string;
+  variantIds: string[];
+}
+
+interface ProcessFlow {
+  templateId: string;
+  templateName: string;
+  inputParameters: ProcessFlowParam[];
+  moduleVariantMap: ProcessFlowModuleMap[];
+}
+
 interface Product {
   id: string;
   name: string;
@@ -61,6 +83,7 @@ interface Product {
   baseCost?: number;
   supplierProductCode?: string | null;
   priceSource?: 'manual' | 'typocon' | 'calculator' | null;
+  processFlow?: ProcessFlow | null;
 }
 
 // Valid grammages per material for Typocon templates
@@ -93,11 +116,55 @@ interface UploadedFile {
 export default function ProductConfigurator({ product }: Props) {
   const isRegularProduct = product.type === 'product';
   const hasVariants = isRegularProduct && product.variants && product.variants.length > 0;
+  const hasPF = !!(product.processFlow?.inputParameters?.length);
 
   const [selectedVariantId, setSelectedVariantId] = useState<string>(
     hasVariants ? product.variants![0].id : '',
   );
   const [quantity, setQuantity] = useState('1');
+
+  // Process flow parameter values
+  const [pfValues, setPfValues] = useState<Record<string, string>>(() => {
+    if (!hasPF) return {};
+    const defaults: Record<string, string> = {};
+    for (const p of product.processFlow!.inputParameters) {
+      if (!p.dependsOn && p.options.length > 0) {
+        defaults[p.id] = p.options[0].value;
+      }
+    }
+    return defaults;
+  });
+
+  // When PF values change, cascade dependent selects and auto-select variant
+  function updatePfValue(paramId: string, value: string) {
+    setPfValues((prev) => {
+      const next = { ...prev, [paramId]: value };
+      // Reset dependent parameters whose parent changed
+      const params = product.processFlow!.inputParameters;
+      const resetQueue = [paramId];
+      while (resetQueue.length > 0) {
+        const parentId = resetQueue.shift()!;
+        for (const p of params) {
+          if (p.dependsOn === parentId) {
+            const filteredOpts = p.options.filter(
+              (o) => !o.parentValue || o.parentValue === next[p.dependsOn!],
+            );
+            next[p.id] = filteredOpts.length > 0 ? filteredOpts[0].value : '';
+            resetQueue.push(p.id);
+          }
+        }
+      }
+      return next;
+    });
+  }
+
+  // Auto-select variant based on PF module-variant mapping
+  useEffect(() => {
+    if (!hasPF || !hasVariants) return;
+    // The variant is already selected by the user via variant buttons;
+    // PF parameters are additional configuration on top of variant selection
+  }, [hasPF, hasVariants, pfValues]);
+
   const [values, setValues] = useState<Record<string, string>>(() => {
     const defaults: Record<string, string> = {};
     product.parameters?.forEach((p) => {
@@ -259,6 +326,20 @@ export default function ProductConfigurator({ product }: Props) {
       ? product.variants!.find((v) => v.id === selectedVariantId)
       : null;
 
+    // Merge PF parameters into order parameters
+    const allParameters = { ...values };
+    if (hasPF) {
+      const pfParams = product.processFlow!.inputParameters;
+      for (const p of pfParams) {
+        if (pfValues[p.id]) {
+          const opt = p.options.find((o) => o.value === pfValues[p.id]);
+          allParameters[`pf_${p.name}`] = opt?.label || pfValues[p.id];
+          allParameters[`pf_id_${p.id}`] = pfValues[p.id];
+        }
+      }
+      allParameters['_processFlowTemplateId'] = product.processFlow!.templateId;
+    }
+
     const newItem = addToCart({
       productId: product.id,
       productName: product.name,
@@ -266,7 +347,7 @@ export default function ProductConfigurator({ product }: Props) {
       variantId: selectedVariant?.id || null,
       variantName: selectedVariant?.name || null,
       quantity: isRegularProduct ? Number(quantity) || 1 : (Number(values?.quantity) || Number(values?.['Množstvo (ks)']) || 1),
-      parameters: values,
+      parameters: allParameters,
       notes,
       fileNames: files.map((f) => f.file.name),
       categoryId: product.categoryId || null,
@@ -506,6 +587,48 @@ export default function ProductConfigurator({ product }: Props) {
                       </div>
                     )}
                   </div>
+                  {/* ──── Process Flow Parameters ──── */}
+                  {hasPF && product.processFlow!.inputParameters.map((pfParam) => {
+                    const parentValue = pfParam.dependsOn ? pfValues[pfParam.dependsOn] : null;
+                    const filteredOptions = pfParam.options.filter(
+                      (o) => !o.parentValue || o.parentValue === parentValue,
+                    );
+
+                    if (pfParam.dependsOn && !parentValue) return null;
+                    if (filteredOptions.length === 0) return null;
+
+                    return (
+                      <div key={pfParam.id}>
+                        <label className="block text-white text-sm font-medium mb-1.5">
+                          {pfParam.name}
+                          {pfParam.required && <span className="text-red-400 ml-1">*</span>}
+                        </label>
+                        {pfParam.type === 'select' ? (
+                          <select
+                            value={pfValues[pfParam.id] || ''}
+                            onChange={(e) => updatePfValue(pfParam.id, e.target.value)}
+                            required={pfParam.required}
+                            className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white focus:border-adsun-orange focus:ring-1 focus:ring-adsun-orange transition-colors"
+                          >
+                            <option value="">Vyberte {pfParam.name.toLowerCase()}...</option>
+                            {filteredOptions.map((o) => (
+                              <option key={o.id} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={pfValues[pfParam.id] || ''}
+                            onChange={(e) => updatePfValue(pfParam.id, e.target.value)}
+                            placeholder={pfParam.name}
+                            required={pfParam.required}
+                            className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-adsun-orange focus:ring-1 focus:ring-adsun-orange transition-colors"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+
                   <div>
                     <label className="block text-white text-sm font-medium mb-1.5">
                       Množstvo <span className="text-red-400 ml-1">*</span>

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   IdCard, Car, Printer, StickyNote, Shirt, Layers,
   Newspaper, Sparkles, RectangleHorizontal, Image, Package,
@@ -725,7 +725,177 @@ function shortenCompanyName(name: string): string {
     .trim();
 }
 
-export default function ProductsCatalog({ categories, clientProducts }: Props) {
+function InquiryForm({ collapsed = false }: { collapsed?: boolean }) {
+  const [open, setOpen] = useState(!collapsed);
+  const [message, setMessage] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!message.trim()) return;
+    setSending(true);
+    setResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('message', message);
+      for (const f of files) formData.append('files', f);
+
+      const res = await fetch('/api/proxy/inquiry', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        setResult({ ok: true, text: 'Dopyt bol odoslaný. Kópia bola zaslaná na váš email.' });
+        setMessage('');
+        setFiles([]);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setResult({ ok: false, text: data.error || 'Chyba pri odosielaní' });
+      }
+    } catch {
+      setResult({ ok: false, text: 'Chyba pripojenia k serveru' });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function removeFile(idx: number) {
+    setFiles(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  if (collapsed && !open) {
+    return (
+      <div className="mt-8">
+        <button
+          onClick={() => setOpen(true)}
+          className="glass-card p-5 w-full flex items-center gap-4 group hover:border-adsun-orange/30 transition-colors text-left"
+        >
+          <div className="w-10 h-10 rounded-lg bg-adsun-orange/10 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-white font-medium text-sm group-hover:text-adsun-orange transition-colors">Nenašli ste čo hľadáte?</p>
+            <p className="text-adsun-muted text-xs">Pošlite nám dopyt s popisom a prípadnou prílohou</p>
+          </div>
+          <svg className="w-5 h-5 text-adsun-muted ml-auto" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass-card p-6 mt-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-white font-semibold flex items-center gap-2">
+          <svg className="w-5 h-5 text-adsun-orange" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+          </svg>
+          Poslať dopyt
+        </h3>
+        {collapsed && (
+          <button onClick={() => setOpen(false)} className="text-adsun-muted hover:text-white text-sm">
+            Zavrieť
+          </button>
+        )}
+      </div>
+
+      {result?.ok ? (
+        <div className="rounded-lg p-4 bg-green-500/10 border border-green-500/30 text-green-400 text-sm">
+          {result.text}
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Popíšte čo hľadáte, aký produkt alebo službu potrebujete..."
+              rows={4}
+              className="w-full resize-none"
+              required
+            />
+          </div>
+
+          {/* File attachments */}
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png,.ai,.psd,.eps,.svg,.tiff,.cdr,.indd,.doc,.docx,.xls,.xlsx"
+              onChange={(e) => {
+                if (e.target.files) setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-secondary text-xs flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+              </svg>
+              Priložiť súbor
+            </button>
+
+            {files.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {files.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs text-adsun-muted bg-white/5 rounded px-2 py-1">
+                    <span className="truncate flex-1">{f.name}</span>
+                    <span className="text-[10px] flex-shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                    <button type="button" onClick={() => removeFile(i)} className="text-red-400 hover:text-red-300 flex-shrink-0">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {result && !result.ok && (
+            <div className="rounded-lg p-3 text-sm bg-red-500/10 border border-red-500/30 text-red-400">
+              {result.text}
+            </div>
+          )}
+
+          <button type="submit" disabled={sending || !message.trim()} className="btn-primary flex items-center gap-2">
+            {sending ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Odosielam...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+                Odoslať dopyt
+              </>
+            )}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+export default function ProductsCatalog({ categories, clientProducts, clientName }: Props) {
   const [search, setSearch] = useState('');
   const [browsePath, setBrowsePath] = useState<{ id: string; name: string }[]>([]);
   const [loadedCategory, setLoadedCategory] = useState<{
@@ -1215,25 +1385,33 @@ export default function ProductsCatalog({ categories, clientProducts }: Props) {
         </div>
       )}
 
-      {/* ──── EMPTY STATE ──── */}
+      {/* ──── EMPTY STATE + INQUIRY FORM ──── */}
       {!loading && filteredCategories.length === 0 && currentTemplates.length === 0 && filteredClientProducts.length === 0 && (
-        <div className="glass-card p-12 text-center text-adsun-muted">
-          <svg
-            className="w-12 h-12 mx-auto mb-4 opacity-30"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-            />
-          </svg>
-          <p className="text-lg font-medium mb-1">Žiadne výsledky</p>
-          <p className="text-sm">Skúste zmeniť vyhľadávanie.</p>
+        <div className="space-y-6">
+          <div className="glass-card p-12 text-center text-adsun-muted">
+            <svg
+              className="w-12 h-12 mx-auto mb-4 opacity-30"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+              />
+            </svg>
+            <p className="text-lg font-medium mb-1">Žiadne výsledky</p>
+            <p className="text-sm">Skúste zmeniť vyhľadávanie alebo nám pošlite dopyt.</p>
+          </div>
+          <InquiryForm />
         </div>
+      )}
+
+      {/* Inquiry button always visible at bottom */}
+      {!loading && (filteredCategories.length > 0 || currentTemplates.length > 0 || filteredClientProducts.length > 0) && (
+        <InquiryForm collapsed />
       )}
     </div>
   );
