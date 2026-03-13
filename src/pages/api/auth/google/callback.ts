@@ -1,16 +1,17 @@
 // ============================================
 // Google OAuth Callback
-// Exchange code → get email → call business-flow-ai → set JWT cookie
+// Exchange code → get email → login OR link account
 // ============================================
 
 import type { APIRoute } from 'astro';
-import { createJwt, setSessionCookie } from '@/lib/auth';
+import { createJwt, setSessionCookie, getSession } from '@/lib/auth';
 
 const API_BASE = process.env.PUBLIC_API_URL || import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
 export const GET: APIRoute = async ({ request, redirect }) => {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state') || 'login';
 
   if (!code) {
     return redirect('/?error=no_code');
@@ -33,7 +34,8 @@ export const GET: APIRoute = async ({ request, redirect }) => {
 
     if (!tokenRes.ok) {
       console.error('[AUTH] Google token exchange failed:', await tokenRes.text());
-      return redirect('/?error=auth_failed');
+      const errorRedirect = state === 'link' ? '/settings?google=error' : '/?error=auth_failed';
+      return redirect(errorRedirect);
     }
 
     const tokenData = await tokenRes.json();
@@ -45,17 +47,42 @@ export const GET: APIRoute = async ({ request, redirect }) => {
 
     if (!userInfoRes.ok) {
       console.error('[AUTH] Google userinfo failed');
-      return redirect('/?error=auth_failed');
+      const errorRedirect = state === 'link' ? '/settings?google=error' : '/?error=auth_failed';
+      return redirect(errorRedirect);
     }
 
     const googleUser = await userInfoRes.json();
-    const email = googleUser.email as string;
+    const googleEmail = (googleUser.email as string).toLowerCase().trim();
 
-    // 3. Ask business-flow-ai to verify this email is a registered client
+    // ── LINK MODE: save Google email to existing account ──
+    if (state === 'link') {
+      const session = await getSession(request.headers.get('cookie'));
+      if (!session) {
+        return redirect('/?error=auth_failed');
+      }
+
+      const linkRes = await fetch(`${API_BASE}/api/portal/auth/link-google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: session.clientId,
+          googleEmail,
+        }),
+      });
+
+      if (!linkRes.ok) {
+        console.error('[AUTH] Link Google failed:', await linkRes.text());
+        return redirect('/settings?google=error');
+      }
+
+      return redirect(`/settings?google=linked&email=${encodeURIComponent(googleEmail)}`);
+    }
+
+    // ── LOGIN MODE: verify client and create session ──
     const verifyRes = await fetch(`${API_BASE}/api/portal/auth/verify-client`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: googleEmail }),
     });
 
     if (!verifyRes.ok) {
@@ -66,19 +93,17 @@ export const GET: APIRoute = async ({ request, redirect }) => {
 
     const clientData = await verifyRes.json();
 
-    // 4. Create JWT token (includes allClientIds for multi-company access)
     const token = await createJwt({
       clientId: clientData.clientId,
       clientEntityId: clientData.clientEntityId,
-      clientName: clientData.clientName || googleUser.name || email,
+      clientName: clientData.clientName || googleUser.name || googleEmail,
       contactName: clientData.contactName || googleUser.name || undefined,
-      email,
+      email: googleEmail,
       organizationId: clientData.organizationId,
       storagePath: clientData.storagePath,
       allClientIds: clientData.allClientIds || [],
     });
 
-    // 5. Set cookie and redirect
     return new Response(null, {
       status: 302,
       headers: {
@@ -88,6 +113,7 @@ export const GET: APIRoute = async ({ request, redirect }) => {
     });
   } catch (err) {
     console.error('[AUTH] OAuth callback error:', err);
-    return redirect('/?error=auth_failed');
+    const errorRedirect = state === 'link' ? '/settings?google=error' : '/?error=auth_failed';
+    return redirect(errorRedirect);
   }
 };
