@@ -248,34 +248,32 @@ const withVat = (n: number) => n * (1 + vatRate / 100);
 const globalPricing = quote?.calculationData?.globalPricingBreakdown || {};
 const combinedMultiplier = (Number(globalPricing.clientMultiplier) || 1) * (Number(globalPricing.deliveryMultiplier) || 1);
 
-function computeProductUnit(p: any): number {
-  const base = firstPos(p?.variant?.salePrice, p?.variant?.basePrice, p?.unitPrice);
-  const matCost = (p?.variant?.materials || []).reduce((t: number, m: any) => t + firstPos(m?.salePrice, m?.pricePerUnit, m?.price) * (toNum(m?.quantity) || 1), 0);
-  const svcCost = (p?.variant?.services || []).reduce((t: number, s: any) => t + firstPos(s?.salePrice, s?.basePrice, s?.price) * (toNum(s?.quantity) || 1), 0);
-  return base + matCost + svcCost;
-}
-function computeProductTotal(p: any): number {
-  const qty = Number(p?.quantity) || 1;
-  const stored = Number(p?.totalCost) || 0;
-  return (stored > 0 ? stored : computeProductUnit(p) * qty) * combinedMultiplier;
-}
-
 const totalAmount = (() => {
   if (!quote) return 0;
   const stored = Number(quote.totalPrice || quote.calculationData?.actualTotalPrice);
   if (isFinite(stored) && stored > 0) return stored;
+  function computeProductUnit(p: any): number {
+    const base = firstPos(p?.variant?.salePrice, p?.variant?.basePrice, p?.unitPrice);
+    const matCost = (p?.variant?.materials || []).reduce((t: number, m: any) => t + firstPos(m?.salePrice, m?.pricePerUnit, m?.price) * (toNum(m?.quantity) || 1), 0);
+    const svcCost = (p?.variant?.services || []).reduce((t: number, s: any) => t + firstPos(s?.salePrice, s?.basePrice, s?.price) * (toNum(s?.quantity) || 1), 0);
+    return base + matCost + svcCost;
+  }
   const s = (quote.services || []).reduce((t: number, x: any) => t + (x.calculatedCost || 0), 0);
-  const p = (quote.products || []).reduce((t: number, x: any) => t + computeProductTotal(x), 0);
+  const p = (quote.products || []).reduce((t: number, x: any) => {
+    const qty = Number(x?.quantity) || 1;
+    const st = Number(x?.totalCost) || 0;
+    return t + (st > 0 ? st : computeProductUnit(x) * qty);
+  }, 0);
   const m = (quote.materials || []).reduce((t: number, x: any) => t + (x.totalCost || 0), 0);
   return s + p + m;
 })();
 
+// Derive base amount from multipliers only — show discount only when
+// there is a real client discount (client rating or delivery multiplier),
+// not from internal pricing rules.
 const baseAmount = (() => {
-  if (!quote) return 0;
-  const s = (quote.services || []).reduce((t: number, x: any) => t + (x.calculatedCost || 0), 0);
-  const p = (quote.products || []).reduce((t: number, x: any) => { const qty = Number(x?.quantity) || 1; const st = Number(x?.totalCost) || 0; return t + (st > 0 ? st : computeProductUnit(x) * qty); }, 0);
-  const m = (quote.materials || []).reduce((t: number, x: any) => t + (x.totalCost || 0), 0);
-  return s + p + m;
+  if (!quote || combinedMultiplier >= 1) return totalAmount;
+  return totalAmount / combinedMultiplier;
 })();
 
 const savings = baseAmount - totalAmount;
